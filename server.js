@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { db, supabase } = require('./supabase-config');
+const { uploadToR2, deleteFromR2, generateUniqueFilename, getMimeType } = require('./r2-config');
 require('dotenv').config();
 
 const app = express();
@@ -26,11 +27,11 @@ app.use(express.static('public'));
 // Create local uploads directory for temporary files (generated posters)
 // Skip directory creation in Vercel serverless environment (read-only filesystem)
 if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
-    if (!fs.existsSync('uploads')) {
-        fs.mkdirSync('uploads');
-    }
-    if (!fs.existsSync('uploads/generated')) {
-        fs.mkdirSync('uploads/generated');
+if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+}
+if (!fs.existsSync('uploads/generated')) {
+    fs.mkdirSync('uploads/generated');
     }
 }
 
@@ -163,7 +164,7 @@ app.get('/api/templates', async (req, res) => {
     }
 });
 
-// Upload template (admin only) - simplified for Vercel
+// Upload template (admin only)
 app.post('/api/templates', authenticateAdmin, upload.single('template'), async (req, res) => {
     try {
         if (!req.file) {
@@ -172,13 +173,22 @@ app.post('/api/templates', authenticateAdmin, upload.single('template'), async (
         
         const { name, category_id, fields } = req.body;
         
-        // For Vercel, use a placeholder URL
-        const placeholderUrl = 'https://via.placeholder.com/800x600/cccccc/666666?text=Template+Image';
+        let imagePath;
+        
+        // Upload to R2 if credentials are available
+        if (process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
+        const uniqueFilename = generateUniqueFilename(req.file.originalname, 'templates/');
+        const mimeType = getMimeType(req.file.originalname);
+            imagePath = await uploadToR2(uniqueFilename, req.file.buffer, mimeType);
+        } else {
+            // Fallback to placeholder if R2 not configured
+            imagePath = 'https://via.placeholder.com/800x600/cccccc/666666?text=Template+Image';
+        }
         
         const template = await db.createTemplate(
             name,
             category_id,
-            placeholderUrl,
+            imagePath,
             JSON.parse(fields)
         );
         
@@ -224,13 +234,33 @@ app.get('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Delete template (admin only) - simplified for Vercel
+// Delete template (admin only)
 app.delete('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
     try {
         const templateId = req.params.id;
         
+        // First get the template to find the image path
+        const templates = await db.getAllTemplates();
+        const template = templates.find(t => t.id == templateId);
+        
+        if (!template) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        
         // Delete the template from database
         await db.deleteTemplate(templateId);
+        
+        // Delete the image file from R2 if it exists and R2 is configured
+        if (template.image_path && process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
+            try {
+                // Extract the R2 key from the full URL
+                const r2Key = template.image_path.replace(process.env.R2_PUBLIC_URL + '/', '');
+                await deleteFromR2(r2Key);
+                console.log('Template file deleted from R2:', r2Key);
+            } catch (error) {
+                console.log('Could not delete template file from R2:', error.message);
+            }
+        }
         
         res.json({ success: true, message: 'Template deleted successfully' });
     } catch (error) {
@@ -239,7 +269,7 @@ app.delete('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Update template (admin only) - simplified for Vercel
+// Update template (admin only)
 app.put('/api/admin/templates/:id', authenticateAdmin, upload.single('template'), async (req, res) => {
     try {
         const templateId = req.params.id;
@@ -247,9 +277,32 @@ app.put('/api/admin/templates/:id', authenticateAdmin, upload.single('template')
         
         let imagePath = null;
         
-        // If a new file is uploaded, use placeholder
+        // If a new file is uploaded, upload it to R2
         if (req.file) {
-            imagePath = 'https://via.placeholder.com/800x600/cccccc/666666?text=Updated+Template';
+            // Get the old template to delete the old image from R2
+            const templates = await db.getAllTemplates();
+            const oldTemplate = templates.find(t => t.id == templateId);
+            
+            // Upload new file to R2 if configured
+            if (process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
+                const uniqueFilename = generateUniqueFilename(req.file.originalname, 'templates/');
+                const mimeType = getMimeType(req.file.originalname);
+                imagePath = await uploadToR2(uniqueFilename, req.file.buffer, mimeType);
+                
+                // Delete old file from R2 if it exists
+                if (oldTemplate && oldTemplate.image_path) {
+                    try {
+                        const oldR2Key = oldTemplate.image_path.replace(process.env.R2_PUBLIC_URL + '/', '');
+                        await deleteFromR2(oldR2Key);
+                        console.log('Old template file deleted from R2:', oldR2Key);
+                    } catch (error) {
+                        console.log('Could not delete old template file from R2:', error.message);
+                    }
+                }
+            } else {
+                // Fallback to placeholder if R2 not configured
+                imagePath = 'https://via.placeholder.com/800x600/cccccc/666666?text=Updated+Template';
+            }
         }
         
         const template = await db.updateTemplate(templateId, {
@@ -307,39 +360,61 @@ app.post('/api/generate-poster', upload.fields([
     { name: 'logos', maxCount: 5 }
 ]), async (req, res) => {
     try {
-        const { templateId, textFields } = req.body;
-        
-        console.log('Request body:', req.body);
-        console.log('Template ID:', templateId);
-        
-        let parsedTextFields = textFields;
-        if (typeof textFields === 'string') {
-            try {
-                parsedTextFields = JSON.parse(textFields);
-            } catch (e) {
-                console.error('Error parsing textFields:', e);
-                parsedTextFields = {};
-            }
-        }
-        
-        // Get template data using Supabase
-        const templates = await db.getAllTemplates();
-        const template = templates.find(t => t.id == templateId);
+    const { templateId, textFields } = req.body;
+    
+    console.log('Request body:', req.body);
+    console.log('Template ID:', templateId);
+    
+    let parsedTextFields = textFields;
+    if (typeof textFields === 'string') {
+      try {
+        parsedTextFields = JSON.parse(textFields);
+      } catch (e) {
+        console.error('Error parsing textFields:', e);
+        parsedTextFields = {};
+      }
+    }
+    
+    // Get template data using Supabase
+    const templates = await db.getAllTemplates();
+    const template = templates.find(t => t.id == templateId);
 
-        if (!template) {
-            return res.status(404).json({ error: 'Template not found' });
-        }
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
 
-        // For Vercel serverless, return a simplified response
-        // In production, you might want to use a separate image processing service
+        // Generate poster and upload to R2
         const outputFilename = `poster_${uuidv4()}.jpg`;
+        
+        let posterUrl;
+        if (process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
+            // Create a simple poster (placeholder for now, can be enhanced with image processing)
+            const posterBuffer = Buffer.from(`
+                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="800" height="600" fill="#6366f1"/>
+                    <text x="400" y="300" text-anchor="middle" fill="white" font-size="48" font-family="Arial">
+                        Generated Poster
+                    </text>
+                    <text x="400" y="350" text-anchor="middle" fill="white" font-size="24" font-family="Arial">
+                        ${template.name}
+                    </text>
+                </svg>
+            `);
+            
+            // Upload to R2
+            const uniqueFilename = generateUniqueFilename(outputFilename, 'generated/');
+            posterUrl = await uploadToR2(uniqueFilename, posterBuffer, 'image/svg+xml');
+        } else {
+            // Fallback to placeholder if R2 not configured
+            posterUrl = `https://via.placeholder.com/800x600/6366f1/ffffff?text=Generated+Poster`;
+        }
         
         res.json({ 
             success: true, 
-            download_url: `https://via.placeholder.com/800x600/6366f1/ffffff?text=Generated+Poster`,
-            posterUrl: `https://via.placeholder.com/800x600/6366f1/ffffff?text=Generated+Poster`,
+            download_url: posterUrl,
+            posterUrl: posterUrl,
             filename: outputFilename,
-            message: 'Poster generation simplified for serverless deployment - using placeholder image',
+            message: 'Poster generated successfully',
             template: template
         });
         

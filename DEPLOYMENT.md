@@ -15,7 +15,7 @@
    git init
    git add .
    git commit -m "Initial commit"
-   git remote add origin https://github.com/yourusername/freeposter.git
+   git remote add origin https://github.com/PagePerfecttech/postermaker.git
    git push -u origin main
    ```
 
@@ -33,14 +33,14 @@
    R2_ACCESS_KEY_ID=your_access_key
    R2_SECRET_ACCESS_KEY=your_secret_key
    R2_BUCKET_NAME=your_bucket_name
-   R2_PUBLIC_URL=https://your-domain.com
+   R2_PUBLIC_URL=https://your-r2-domain.com
    JWT_SECRET=your_jwt_secret_key_here
    NODE_ENV=production
    ```
 
 4. **Deploy!**
    - Click "Deploy"
-   - Your app will be live at `https://your-app.vercel.app`
+   - Your app will be live at `https://vbposter.vercel.app`
 
 ## Option 2: Railway
 
