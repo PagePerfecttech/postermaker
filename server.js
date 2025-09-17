@@ -514,8 +514,13 @@ app.get('/admin', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`Festival Poster Maker server running on http://localhost:${PORT}`);
-    console.log(`Admin panel available at http://localhost:${PORT}/admin`);
-    console.log('Default admin credentials: username=admin, password=admin123');
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Festival Poster Maker server running on http://localhost:${PORT}`);
+        console.log(`Admin panel available at http://localhost:${PORT}/admin`);
+        console.log('Default admin credentials: username=admin, password=admin123');
+    });
+}
+
+// Export for Vercel
+module.exports = app;
