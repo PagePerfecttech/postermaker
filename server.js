@@ -17,6 +17,22 @@ const JWT_SECRET = process.env.JWT_SECRET || 'festival_poster_secret_key_2024';
 
 // Middleware
 app.use(cors());
+
+// Content Security Policy middleware
+app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://kit.fontawesome.com; " +
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; " +
+        "font-src 'self' https://cdnjs.cloudflare.com https://kit.fontawesome.com; " +
+        "img-src 'self' data: https: blob:; " +
+        "connect-src 'self' https://*.supabase.co https://*.cloudflarestorage.com; " +
+        "object-src 'none'; " +
+        "base-uri 'self';"
+    );
+    next();
+});
+
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static('public'));
@@ -91,32 +107,24 @@ const authenticateAdmin = (req, res, next) => {
 
 // Routes
 
-// Admin login
+// Admin login (disabled - no auth required)
 app.post('/api/admin/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        
-        const admin = await db.getAdminByUsername(username);
-        
-        if (!admin || !bcrypt.compareSync(password, admin.password)) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-        
-        const token = jwt.sign({ id: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: '24h' });
-        res.json({ token, admin: { id: admin.id, username: admin.username } });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Database error' });
-    }
+    res.json({ 
+        message: 'Admin authentication disabled', 
+        token: 'no-auth-required',
+        admin: { id: '1', username: 'admin' }
+    });
 });
 
 // Get all categories
 app.get('/api/categories', async (req, res) => {
     try {
+        console.log('📡 Categories API called');
         const categories = await db.getAllCategories();
+        console.log('📊 Categories from database:', categories.length, categories);
         res.json(categories);
     } catch (error) {
-        console.error('Categories error:', error);
+        console.error('❌ Categories error:', error);
         res.status(500).json({ error: 'Database error' });
     }
 });
@@ -139,12 +147,16 @@ app.get('/api/templates', async (req, res) => {
     try {
         const { category_id } = req.query;
         
+        console.log('📡 Templates API called with category_id:', category_id);
+        
         let templates;
         if (category_id) {
             templates = await db.getTemplatesByCategory(category_id);
         } else {
             templates = await db.getAllTemplates();
         }
+        
+        console.log('📊 Raw templates from database:', templates.length, templates);
         
         // Parse fields JSON for each template and format response
         templates.forEach(template => {
@@ -157,15 +169,16 @@ app.get('/api/templates', async (req, res) => {
             template.category_name = template.categories?.name;
         });
         
+        console.log('✅ Processed templates:', templates.length, templates);
         res.json(templates);
     } catch (error) {
-        console.error('Templates error:', error);
+        console.error('❌ Templates error:', error);
         res.status(500).json({ error: 'Database error' });
     }
 });
 
-// Upload template (admin only)
-app.post('/api/templates', authenticateAdmin, upload.single('template'), async (req, res) => {
+// Upload template (no auth required)
+app.post('/api/templates', upload.single('template'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -205,8 +218,8 @@ app.post('/api/templates', authenticateAdmin, upload.single('template'), async (
     }
 });
 
-// Get individual template (admin only)
-app.get('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
+// Get individual template (no auth required)
+app.get('/api/admin/templates/:id', async (req, res) => {
     try {
         const templateId = req.params.id;
         
@@ -234,8 +247,8 @@ app.get('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Delete template (admin only)
-app.delete('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
+// Delete template (no auth required)
+app.delete('/api/admin/templates/:id', async (req, res) => {
     try {
         const templateId = req.params.id;
         
@@ -269,8 +282,8 @@ app.delete('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Update template (admin only)
-app.put('/api/admin/templates/:id', authenticateAdmin, upload.single('template'), async (req, res) => {
+// Update template (no auth required)
+app.put('/api/admin/templates/:id', upload.single('template'), async (req, res) => {
     try {
         const templateId = req.params.id;
         const { name, category_id, fields } = req.body;
@@ -343,8 +356,8 @@ app.post('/api/record-download', async (req, res) => {
     }
 });
 
-// Get downloads for admin panel
-app.get('/api/admin/downloads', authenticateAdmin, async (req, res) => {
+// Get downloads for admin panel (no auth required)
+app.get('/api/admin/downloads', async (req, res) => {
     try {
         const downloads = await db.getAllDownloads();
         res.json(downloads);

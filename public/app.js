@@ -80,6 +80,13 @@ async function loadData() {
         console.log('📋 Categories:', categories);
         console.log('🎨 Templates:', templates);
         
+        // Debug: Check if templates have proper structure
+        if (templates.length > 0) {
+            console.log('🔍 First template structure:', templates[0]);
+        } else {
+            console.log('⚠️ No templates found in response');
+        }
+        
         // Update app state
         AppState.categories = categories;
         AppState.templates = templates;
