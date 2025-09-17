@@ -20,15 +20,18 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static('public'));
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded files statically (disabled for Vercel serverless)
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Create local uploads directory for temporary files (generated posters)
-if (!fs.existsSync('uploads')) {
-    fs.mkdirSync('uploads');
-}
-if (!fs.existsSync('uploads/generated')) {
-    fs.mkdirSync('uploads/generated');
+// Skip directory creation in Vercel serverless environment (read-only filesystem)
+if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
+    if (!fs.existsSync('uploads')) {
+        fs.mkdirSync('uploads');
+    }
+    if (!fs.existsSync('uploads/generated')) {
+        fs.mkdirSync('uploads/generated');
+    }
 }
 
 // Multer configuration for memory storage (files will be uploaded to R2)
@@ -333,10 +336,10 @@ app.post('/api/generate-poster', upload.fields([
         
         res.json({ 
             success: true, 
-            download_url: `/uploads/generated/${outputFilename}`,
-            posterUrl: `/uploads/generated/${outputFilename}`,
+            download_url: `https://via.placeholder.com/800x600/6366f1/ffffff?text=Generated+Poster`,
+            posterUrl: `https://via.placeholder.com/800x600/6366f1/ffffff?text=Generated+Poster`,
             filename: outputFilename,
-            message: 'Poster generation simplified for serverless deployment',
+            message: 'Poster generation simplified for serverless deployment - using placeholder image',
             template: template
         });
         
