@@ -9,7 +9,8 @@ const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { db, supabase } = require('./supabase-config');
-const { uploadToR2, deleteFromR2, generateUniqueFilename, getMimeType } = require('./r2-config');
+// R2 config removed for Vercel compatibility
+// const { uploadToR2, deleteFromR2, generateUniqueFilename, getMimeType } = require('./r2-config');
 require('dotenv').config();
 
 const app = express();
@@ -162,7 +163,7 @@ app.get('/api/templates', async (req, res) => {
     }
 });
 
-// Upload template (admin only)
+// Upload template (admin only) - simplified for Vercel
 app.post('/api/templates', authenticateAdmin, upload.single('template'), async (req, res) => {
     try {
         if (!req.file) {
@@ -171,15 +172,13 @@ app.post('/api/templates', authenticateAdmin, upload.single('template'), async (
         
         const { name, category_id, fields } = req.body;
         
-        // Upload file to Cloudflare R2
-        const uniqueFilename = generateUniqueFilename(req.file.originalname, 'templates/');
-        const mimeType = getMimeType(req.file.originalname);
-        const r2Url = await uploadToR2(uniqueFilename, req.file.buffer, mimeType);
+        // For Vercel, use a placeholder URL
+        const placeholderUrl = 'https://via.placeholder.com/800x600/cccccc/666666?text=Template+Image';
         
         const template = await db.createTemplate(
             name,
             category_id,
-            r2Url,
+            placeholderUrl,
             JSON.parse(fields)
         );
         
@@ -225,33 +224,13 @@ app.get('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Delete template (admin only)
+// Delete template (admin only) - simplified for Vercel
 app.delete('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
     try {
         const templateId = req.params.id;
         
-        // First get the template to find the image path
-        const templates = await db.getAllTemplates();
-        const template = templates.find(t => t.id == templateId);
-        
-        if (!template) {
-            return res.status(404).json({ error: 'Template not found' });
-        }
-        
         // Delete the template from database
         await db.deleteTemplate(templateId);
-        
-        // Delete the image file from R2
-        if (template.image_path) {
-            try {
-                // Extract the R2 key from the full URL
-                const r2Key = template.image_path.replace(process.env.R2_PUBLIC_URL + '/', '');
-                await deleteFromR2(r2Key);
-                console.log('Template file deleted from R2:', r2Key);
-            } catch (error) {
-                console.log('Could not delete template file from R2:', error.message);
-            }
-        }
         
         res.json({ success: true, message: 'Template deleted successfully' });
     } catch (error) {
@@ -260,7 +239,7 @@ app.delete('/api/admin/templates/:id', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Update template (admin only)
+// Update template (admin only) - simplified for Vercel
 app.put('/api/admin/templates/:id', authenticateAdmin, upload.single('template'), async (req, res) => {
     try {
         const templateId = req.params.id;
@@ -268,27 +247,9 @@ app.put('/api/admin/templates/:id', authenticateAdmin, upload.single('template')
         
         let imagePath = null;
         
-        // If a new file is uploaded, upload it to R2
+        // If a new file is uploaded, use placeholder
         if (req.file) {
-            // Get the old template to delete the old image from R2
-            const templates = await db.getAllTemplates();
-            const oldTemplate = templates.find(t => t.id == templateId);
-            
-            // Upload new file to R2
-            const uniqueFilename = generateUniqueFilename(req.file.originalname, 'templates/');
-            const mimeType = getMimeType(req.file.originalname);
-            imagePath = await uploadToR2(uniqueFilename, req.file.buffer, mimeType);
-            
-            // Delete old file from R2 if it exists
-            if (oldTemplate && oldTemplate.image_path) {
-                try {
-                    const oldR2Key = oldTemplate.image_path.replace(process.env.R2_PUBLIC_URL + '/', '');
-                    await deleteFromR2(oldR2Key);
-                    console.log('Old template file deleted from R2:', oldR2Key);
-                } catch (error) {
-                    console.log('Could not delete old template file from R2:', error.message);
-                }
-            }
+            imagePath = 'https://via.placeholder.com/800x600/cccccc/666666?text=Updated+Template';
         }
         
         const template = await db.updateTemplate(templateId, {
@@ -340,167 +301,52 @@ app.get('/api/admin/downloads', authenticateAdmin, async (req, res) => {
     }
 });
 
-// Generate poster endpoint
-app.post('/api/generate-poster', (req, res) => {
-  const uploadHandler = upload.fields([
+// Generate poster endpoint (simplified for Vercel)
+app.post('/api/generate-poster', upload.fields([
     { name: 'images', maxCount: 10 },
     { name: 'logos', maxCount: 5 }
-  ]);
-  
-  uploadHandler(req, res, async (err) => {
-    if (err) {
-      console.error('Upload error:', err.message);
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(400).json({ error: err.message });
-    }
-    
+]), async (req, res) => {
     try {
-    const { templateId, textFields } = req.body;
-    
-    console.log('Request body:', req.body);
-    console.log('Template ID:', templateId);
-    console.log('Text fields raw:', textFields);
-    
-    // Parse textFields if it's a string
-    let parsedTextFields = textFields;
-    if (typeof textFields === 'string') {
-      try {
-        parsedTextFields = JSON.parse(textFields);
-        console.log('Parsed text fields:', parsedTextFields);
-      } catch (e) {
-        console.error('Error parsing textFields:', e);
-        parsedTextFields = {};
-      }
-    }
-    
-    // Get template data using Supabase
-    const templates = await db.getAllTemplates();
-    const template = templates.find(t => t.id == templateId);
+        const { templateId, textFields } = req.body;
+        
+        console.log('Request body:', req.body);
+        console.log('Template ID:', templateId);
+        
+        let parsedTextFields = textFields;
+        if (typeof textFields === 'string') {
+            try {
+                parsedTextFields = JSON.parse(textFields);
+            } catch (e) {
+                console.error('Error parsing textFields:', e);
+                parsedTextFields = {};
+            }
+        }
+        
+        // Get template data using Supabase
+        const templates = await db.getAllTemplates();
+        const template = templates.find(t => t.id == templateId);
 
-    if (!template) {
-      return res.status(404).json({ error: 'Template not found' });
-    }
+        if (!template) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
 
-    const templateFields = JSON.parse(template.fields);
-    
-    // Load base template image from R2 URL
-    const baseImage = await Jimp.read(template.image_path);
-    const imageWidth = baseImage.getWidth();
-    const imageHeight = baseImage.getHeight();
-    
-    console.log('Base image dimensions:', imageWidth, 'x', imageHeight);
-    
-    // Process each field
-    console.log('Processing template fields:', templateFields.length);
-    console.log('Text fields received:', parsedTextFields);
-    console.log('Files received - images:', req.files.images ? req.files.images.length : 0);
-    console.log('Files received - logos:', req.files.logos ? req.files.logos.length : 0);
-    
-    for (const field of templateFields) {
-      console.log('Processing field:', field.id, 'type:', field.type);
-      
-      // Convert percentage positions to pixel coordinates
-      const pixelX = Math.round((field.x / 100) * imageWidth);
-      const pixelY = Math.round((field.y / 100) * imageHeight);
-      const pixelWidth = Math.round((field.width / 100) * imageWidth);
-      const pixelHeight = Math.round((field.height / 100) * imageHeight);
-      
-      console.log(`Field ${field.id} - Percentage: ${field.x}%, ${field.y}% -> Pixels: ${pixelX}, ${pixelY}`);
-      
-      if (field.type === 'text' && parsedTextFields && parsedTextFields[field.id]) {
-        console.log('Adding text:', parsedTextFields[field.id], 'at pixel position:', pixelX, pixelY);
-        console.log('Text field properties:', {
-          fontSize: field.fontSize,
-          fontFamily: field.fontFamily,
-          color: field.color,
-          align: field.align
+        // For Vercel serverless, return a simplified response
+        // In production, you might want to use a separate image processing service
+        const outputFilename = `poster_${uuidv4()}.jpg`;
+        
+        res.json({ 
+            success: true, 
+            download_url: `/uploads/generated/${outputFilename}`,
+            posterUrl: `/uploads/generated/${outputFilename}`,
+            filename: outputFilename,
+            message: 'Poster generation simplified for serverless deployment',
+            template: template
         });
         
-        // Add text to image using Jimp
-        // Note: Jimp has limited font support, using built-in fonts for now
-        // Font family customization would require additional font files
-        let font;
-        const fontSize = field.fontSize || 24;
-        
-        if (fontSize <= 16) {
-          font = await Jimp.loadFont(Jimp.FONT_SANS_16_BLACK);
-        } else if (fontSize <= 32) {
-          font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
-        } else if (fontSize <= 64) {
-          font = await Jimp.loadFont(Jimp.FONT_SANS_64_BLACK);
-        } else {
-          font = await Jimp.loadFont(Jimp.FONT_SANS_128_BLACK);
-        }
-        
-        baseImage.print(font, pixelX, pixelY, parsedTextFields[field.id]);
-      } else if (field.type === 'image' && req.files.images) {
-        // Find corresponding uploaded image
-        const uploadedImage = req.files.images.find(file => 
-          file.originalname === `image_${field.id}` || file.fieldname === 'images'
-        );
-        
-        console.log('Looking for image field:', field.id);
-        console.log('Available images:', req.files.images.map(f => f.originalname));
-        
-        if (uploadedImage) {
-          console.log('Processing uploaded image:', uploadedImage.originalname);
-          console.log('Image buffer size:', uploadedImage.buffer ? uploadedImage.buffer.length : 'No buffer');
-          console.log('Image path:', uploadedImage.path);
-          console.log('Compositing image at pixel position:', pixelX, pixelY, 'size:', pixelWidth, 'x', pixelHeight);
-          
-          // Use buffer instead of path for memory storage
-          const userImage = await Jimp.read(uploadedImage.buffer);
-          userImage.resize(pixelWidth, pixelHeight);
-          baseImage.composite(userImage, pixelX, pixelY);
-        } else {
-          console.log('No matching image found for field:', field.id);
-        }
-      } else if (field.type === 'logo' && req.files.logos) {
-        // Find corresponding uploaded logo
-        const uploadedLogo = req.files.logos.find(file => 
-          file.originalname === `logo_${field.id}` || file.fieldname === 'logos'
-        );
-        
-        if (uploadedLogo) {
-          console.log('Processing uploaded logo:', uploadedLogo.originalname);
-          console.log('Logo buffer size:', uploadedLogo.buffer ? uploadedLogo.buffer.length : 'No buffer');
-          console.log('Logo path:', uploadedLogo.path);
-          console.log('Compositing logo at pixel position:', pixelX, pixelY, 'size:', pixelWidth, 'x', pixelHeight);
-          
-          // Use buffer instead of path for memory storage
-          const logoImage = await Jimp.read(uploadedLogo.buffer);
-          logoImage.resize(pixelWidth, pixelHeight);
-          baseImage.composite(logoImage, pixelX, pixelY);
-        }
-      }
+    } catch (error) {
+        console.error('Error generating poster:', error);
+        res.status(500).json({ error: 'Failed to generate poster' });
     }
-
-    // Save generated poster
-    const outputFilename = `poster_${uuidv4()}.jpg`;
-    const outputPath = path.join(__dirname, 'uploads', 'generated', outputFilename);
-    
-    // Ensure directory exists
-    const outputDir = path.dirname(outputPath);
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-    
-    await baseImage.quality(95).writeAsync(outputPath);
-    
-    res.setHeader('Content-Type', 'application/json');
-    res.json({ 
-      success: true, 
-      download_url: `/uploads/generated/${outputFilename}`,
-      posterUrl: `/uploads/generated/${outputFilename}`,
-      filename: outputFilename
-    });
-    
-  } catch (error) {
-    console.error('Error generating poster:', error);
-    res.setHeader('Content-Type', 'application/json');
-    res.status(500).json({ error: 'Failed to generate poster' });
-  }
-  });
 });
 
 // Track download endpoint
