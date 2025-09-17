@@ -448,7 +448,13 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js"></script>
+    <script>
+        // Add cache-busting parameter to prevent caching issues
+        const timestamp = new Date().getTime();
+        const script = document.createElement('script');
+        script.src = `/app.js?v=${timestamp}`;
+        document.head.appendChild(script);
+    </script>
     
     <!-- Service Worker Registration -->
     <script>

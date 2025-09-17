@@ -23,13 +23,23 @@ function setupEventListeners() {
 // Load categories and templates
 async function loadCategoriesAndTemplates() {
     try {
+        console.log('Loading categories and templates...');
+        
         // Load categories
         const categoriesResponse = await fetch('/api/categories');
+        if (!categoriesResponse.ok) {
+            throw new Error(`Categories API failed: ${categoriesResponse.status}`);
+        }
         allCategories = await categoriesResponse.json();
+        console.log('Categories loaded:', allCategories);
         
         // Load all templates
         const templatesResponse = await fetch('/api/templates');
+        if (!templatesResponse.ok) {
+            throw new Error(`Templates API failed: ${templatesResponse.status}`);
+        }
         allTemplates = await templatesResponse.json();
+        console.log('Templates loaded:', allTemplates);
         
         // Setup category filters
         setupCategoryFilters();
@@ -37,9 +47,11 @@ async function loadCategoriesAndTemplates() {
         // Display all templates initially
         displayTemplates(allTemplates, 'All Templates');
         
+        console.log('Categories and templates loaded successfully');
+        
     } catch (error) {
         console.error('Error loading data:', error);
-        showError('Failed to load templates and categories');
+        showError('Failed to load templates and categories: ' + error.message);
     }
 }
 
