@@ -8,7 +8,7 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { db } = require('./supabase-config');
+const { db, supabase } = require('./supabase-config');
 const { uploadToR2, deleteFromR2, generateUniqueFilename, getMimeType } = require('./r2-config');
 require('dotenv').config();
 
@@ -501,6 +501,45 @@ app.post('/api/generate-poster', (req, res) => {
     res.status(500).json({ error: 'Failed to generate poster' });
   }
   });
+});
+
+// Track download endpoint
+app.post('/api/track-download', async (req, res) => {
+    try {
+        const { name, mobile, template_id, template_name, generated_at } = req.body;
+        
+        console.log('📊 Tracking download:', {
+            name,
+            mobile,
+            template_id,
+            template_name,
+            generated_at
+        });
+        
+        // Save download tracking to database
+        const { data, error } = await supabase
+            .from('downloads')
+            .insert([
+                {
+                    user_name: name,
+                    user_mobile: mobile,
+                    template_id: template_id,
+                    template_name: template_name,
+                    downloaded_at: generated_at || new Date().toISOString()
+                }
+            ]);
+        
+        if (error) {
+            console.error('Database error:', error);
+            return res.status(500).json({ error: 'Failed to save download data' });
+        }
+        
+        console.log('✅ Download data saved to database:', data);
+        res.json({ success: true, message: 'Download tracked successfully' });
+    } catch (error) {
+        console.error('Error tracking download:', error);
+        res.status(500).json({ error: 'Failed to track download' });
+    }
 });
 
 // Serve main page

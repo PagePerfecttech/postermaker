@@ -1,490 +1,952 @@
-// Global variables
-let selectedCategory = null;
-let selectedTemplate = null;
-let templateFields = [];
-let allTemplates = [];
-let allCategories = [];
+// Festival Poster Maker - Modern Frontend
+// Global state management
+const AppState = {
+    categories: [],
+    templates: [],
+    selectedCategory: null,
+    selectedTemplate: null,
+    isLoading: false,
+    error: null
+};
+
+// DOM elements
+const elements = {
+    loadingState: null,
+    errorState: null,
+    errorMessage: null,
+    categoriesSection: null,
+    categoryFilters: null,
+    templatesSection: null,
+    sectionTitle: null,
+    templateCount: null,
+    templatesGrid: null,
+    emptyState: null
+};
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    loadCategoriesAndTemplates();
-    setupEventListeners();
+    console.log('🚀 Festival Poster Maker initialized');
+    initializeElements();
+    loadData();
 });
 
-// Setup event listeners
-function setupEventListeners() {
-    // Poster form submission
-    document.getElementById('posterForm').addEventListener('submit', handlePosterGeneration);
+// Initialize DOM elements
+function initializeElements() {
+    elements.loadingState = document.getElementById('loadingState');
+    elements.errorState = document.getElementById('errorState');
+    elements.errorMessage = document.getElementById('errorMessage');
+    elements.categoriesSection = document.getElementById('categoriesSection');
+    elements.categoryFilters = document.getElementById('categoryFilters');
+    elements.templatesSection = document.getElementById('templatesSection');
+    elements.sectionTitle = document.getElementById('sectionTitle');
+    elements.templateCount = document.getElementById('templateCount');
+    elements.templatesGrid = document.getElementById('templatesGrid');
+    elements.emptyState = document.getElementById('emptyState');
     
-    // Download form submission
-    document.getElementById('downloadForm').addEventListener('submit', handleDownload);
+    console.log('✅ DOM elements initialized');
 }
 
 // Load categories and templates
-async function loadCategoriesAndTemplates() {
+async function loadData() {
     try {
-        console.log('Loading categories and templates...');
+        setLoadingState(true);
+        setErrorState(false);
         
-        // Load categories
-        const categoriesResponse = await fetch('/api/categories');
+        console.log('📡 Loading categories and templates...');
+        
+        // Load both categories and templates in parallel
+        const [categoriesResponse, templatesResponse] = await Promise.all([
+            fetch('/api/categories'),
+            fetch('/api/templates')
+        ]);
+        
+        // Check if requests were successful
         if (!categoriesResponse.ok) {
-            throw new Error(`Categories API failed: ${categoriesResponse.status}`);
+            throw new Error(`Failed to load categories: ${categoriesResponse.status} ${categoriesResponse.statusText}`);
         }
-        allCategories = await categoriesResponse.json();
-        console.log('Categories loaded:', allCategories);
         
-        // Load all templates
-        const templatesResponse = await fetch('/api/templates');
         if (!templatesResponse.ok) {
-            throw new Error(`Templates API failed: ${templatesResponse.status}`);
+            throw new Error(`Failed to load templates: ${templatesResponse.status} ${templatesResponse.statusText}`);
         }
-        allTemplates = await templatesResponse.json();
-        console.log('Templates loaded:', allTemplates);
         
-        // Setup category filters
-        setupCategoryFilters();
+        // Parse JSON responses
+        const categories = await categoriesResponse.json();
+        const templates = await templatesResponse.json();
         
-        // Display all templates initially
-        displayTemplates(allTemplates, 'All Templates');
+        console.log('📊 Data loaded:', { 
+            categories: categories.length, 
+            templates: templates.length 
+        });
+        console.log('📋 Categories:', categories);
+        console.log('🎨 Templates:', templates);
         
-        console.log('Categories and templates loaded successfully');
+        // Update app state
+        AppState.categories = categories;
+        AppState.templates = templates;
+        
+        // Render UI
+        renderCategories();
+        renderTemplates();
+        
+        setLoadingState(false);
+        
+        console.log('✅ Application loaded successfully');
         
     } catch (error) {
-        console.error('Error loading data:', error);
-        showError('Failed to load templates and categories: ' + error.message);
+        console.error('❌ Error loading data:', error);
+        setErrorState(true, error.message);
+        setLoadingState(false);
     }
 }
 
-// Setup category filter buttons
-function setupCategoryFilters() {
-    const container = document.getElementById('categoryFilterButtons');
-    
-    // Clear existing buttons except "All Templates"
-    const allButton = container.querySelector('button');
-    container.innerHTML = '';
-    container.appendChild(allButton);
-    
-    // Add category filter buttons
-    allCategories.forEach(category => {
-        const button = document.createElement('button');
-        button.className = 'btn btn-outline-primary category-filter-btn';
-        button.onclick = () => filterByCategory(category.id, category.name);
-        button.innerHTML = `<i class="fas fa-folder"></i> ${category.name}`;
-        container.appendChild(button);
-    });
+// Set loading state
+function setLoadingState(loading) {
+    AppState.isLoading = loading;
+    if (elements.loadingState) {
+        elements.loadingState.style.display = loading ? 'block' : 'none';
+    }
+    if (elements.categoriesSection) {
+        elements.categoriesSection.style.display = loading ? 'none' : 'block';
+    }
+    if (elements.templatesSection) {
+        elements.templatesSection.style.display = loading ? 'none' : 'block';
+    }
 }
 
-// Show all templates
-function showAllTemplates() {
-    // Update active button
-    document.querySelectorAll('.category-filter-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector('button[onclick="showAllTemplates()"]').classList.add('active');
-    
-    // Display all templates
-    displayTemplates(allTemplates, 'All Templates');
+// Set error state
+function setErrorState(show, message = '') {
+    AppState.error = show ? message : null;
+    if (elements.errorState) {
+        elements.errorState.style.display = show ? 'block' : 'none';
+    }
+    if (elements.errorMessage) {
+        elements.errorMessage.textContent = message;
+    }
+    if (elements.categoriesSection) {
+        elements.categoriesSection.style.display = show ? 'none' : 'block';
+    }
+    if (elements.templatesSection) {
+        elements.templatesSection.style.display = show ? 'none' : 'block';
+    }
 }
 
-// Filter templates by category
-function filterByCategory(categoryId, categoryName) {
-    // Update active button
-    document.querySelectorAll('.category-filter-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    // Filter templates
-    const filteredTemplates = allTemplates.filter(template => template.category_id === categoryId);
-    displayTemplates(filteredTemplates, categoryName);
-}
-
-// Display templates
-function displayTemplates(templates, sectionTitle) {
-    const container = document.getElementById('templatesContainer');
-    const titleElement = document.getElementById('sectionTitle');
-    const countElement = document.getElementById('templateCount');
-    
-    // Update title and count
-    titleElement.textContent = sectionTitle;
-    countElement.textContent = `${templates.length} template${templates.length !== 1 ? 's' : ''}`;
-    
-    // Clear container
-    container.innerHTML = '';
-    
-    if (templates.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    No templates available in this category yet.
-                </div>
-            </div>
-        `;
+// Render categories
+function renderCategories() {
+    if (!elements.categoryFilters || !AppState.categories.length) {
+        console.log('⚠️ No categories to render or category filters element not found');
         return;
     }
     
-    // Add templates
-    templates.forEach(template => {
-        const categoryName = allCategories.find(cat => cat.id === template.category_id)?.name || 'Unknown';
-        
-        const templateCard = document.createElement('div');
-        templateCard.className = 'col-lg-3 col-md-4 col-sm-6 mb-4';
-        const imageSrc = template.image_path.startsWith('http') ? template.image_path : `/${template.image_path}`;
-        
-        templateCard.innerHTML = `
-            <div class="template-card" data-template-id="${template.id}" data-template-name="${template.name}" data-template-path="${template.image_path}">
-                <img src="${imageSrc}" alt="${template.name}" class="template-image">
-                <div class="template-info">
-                    <div class="template-name">${template.name}</div>
-                    <div class="template-category">${categoryName}</div>
-                    <div class="template-fields">
-                        <i class="fas fa-edit"></i> ${template.fields.length} customizable field${template.fields.length !== 1 ? 's' : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Store template fields data and add click event
-        templateCard.querySelector('.template-card').templateFields = template.fields;
-        templateCard.querySelector('.template-card').addEventListener('click', function() {
-            selectTemplateForCustomization(this);
+    console.log('🎯 Rendering categories:', AppState.categories.length);
+    
+    // Create "All" category button
+    const allButton = createCategoryButton({
+        id: 'all',
+        name: 'All Templates',
+        description: 'Show all templates'
+    }, true);
+    
+    // Create category buttons
+    const categoryButtons = AppState.categories.map(category => 
+        createCategoryButton(category, false)
+    );
+    
+    // Clear and populate filters
+    elements.categoryFilters.innerHTML = '';
+    elements.categoryFilters.appendChild(allButton);
+    categoryButtons.forEach(button => elements.categoryFilters.appendChild(button));
+    
+    console.log('✅ Categories rendered successfully');
+}
+
+// Create category button
+function createCategoryButton(category, isActive = false) {
+    const button = document.createElement('button');
+    button.className = `category-btn ${isActive ? 'active' : ''}`;
+    button.textContent = category.name;
+    button.setAttribute('data-category-id', category.id);
+    
+    button.addEventListener('click', () => {
+        selectCategory(category.id === 'all' ? null : category.id, category.name);
+    });
+    
+    return button;
+}
+
+// Select category
+function selectCategory(categoryId, categoryName) {
+    console.log('🎯 Category selected:', { categoryId, categoryName });
+    
+    AppState.selectedCategory = categoryId;
+    
+    // Update active button
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const selectedButton = document.querySelector(`[data-category-id="${categoryId || 'all'}"]`);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+    
+    // Filter and render templates
+    const filteredTemplates = categoryId 
+        ? AppState.templates.filter(template => template.category_id === categoryId)
+        : AppState.templates;
+    
+    renderTemplates(filteredTemplates, categoryName || 'All Templates');
+}
+
+// Render templates
+function renderTemplates(templates = AppState.templates, title = 'All Templates') {
+    console.log('🎨 Rendering templates:', { 
+        count: templates.length, 
+        title,
+        templates: templates.map(t => ({ id: t.id, name: t.name, category_id: t.category_id }))
+    });
+    
+    if (!elements.templatesGrid || !elements.sectionTitle || !elements.templateCount) {
+        console.error('❌ Template elements not found');
+        return;
+    }
+    
+    // Update section title and count
+    elements.sectionTitle.innerHTML = `<i class="fas fa-images"></i> ${title}`;
+    elements.templateCount.textContent = `${templates.length} template${templates.length !== 1 ? 's' : ''}`;
+    
+    // Clear templates grid
+    elements.templatesGrid.innerHTML = '';
+    
+    // Show/hide empty state
+    if (elements.emptyState) {
+        elements.emptyState.style.display = templates.length === 0 ? 'block' : 'none';
+    }
+    
+    // Render templates
+    if (templates.length === 0) {
+        console.log('📭 No templates to display');
+        return;
+    }
+    
+    templates.forEach((template, index) => {
+        console.log(`🎨 Rendering template ${index + 1}:`, {
+            id: template.id,
+            name: template.name,
+            image_path: template.image_path,
+            fields_count: template.fields ? template.fields.length : 0
         });
         
-        container.appendChild(templateCard);
+        const templateCard = createTemplateCard(template);
+        elements.templatesGrid.appendChild(templateCard);
     });
+    
+    console.log('✅ Templates rendered successfully');
+}
+
+// Create template card
+function createTemplateCard(template) {
+    const card = document.createElement('div');
+    card.className = 'template-card fade-in';
+    card.setAttribute('data-template-id', template.id);
+    
+    // Validate template data
+    if (!template.name || !template.id) {
+        console.warn('⚠️ Invalid template data:', template);
+        return card;
+    }
+    
+    // Create fields badges
+    const fieldsHTML = template.fields && Array.isArray(template.fields) 
+        ? template.fields.map(field => 
+            `<span class="field-badge">${field.label || field.name || 'Field'}</span>`
+          ).join('')
+        : '';
+    
+    // Handle image path
+    const imagePath = template.image_path || '/images/default-template.jpg';
+    console.log(`🖼️ Template "${template.name}" image:`, imagePath);
+    
+    card.innerHTML = `
+        <img src="${imagePath}" 
+             class="template-image" 
+             alt="${template.name}"
+             loading="lazy"
+             onerror="this.src='/images/default-template.jpg'; console.log('🖼️ Image failed to load for template: ${template.name}');">
+        <div class="template-content">
+            <h3 class="template-title">${template.name}</h3>
+            <div class="template-fields">
+                ${fieldsHTML}
+            </div>
+            <button class="use-template-btn" onclick="selectTemplate(${template.id})">
+                <i class="fas fa-magic"></i> Use This Template
+            </button>
+        </div>
+    `;
+    
+    return card;
 }
 
 // Select template and show customization form
-function selectTemplateForCustomization(templateElement) {
-    try {
-        const templateId = parseInt(templateElement.dataset.templateId);
-        const templateName = templateElement.dataset.templateName;
-        const imagePath = templateElement.dataset.templatePath;
-        const fields = templateElement.templateFields;
-        
-        selectedTemplate = {
-            id: templateId,
-            name: templateName,
-            imagePath: imagePath,
-            fields: fields
-        };
-        
-        templateFields = selectedTemplate.fields;
-        
-        // Update step indicator
-        updateStepIndicator(3);
-        
-        // Generate form fields
-        generateCustomizationForm();
-        
-        // Hide template display and show customization section
-        document.getElementById('templateDisplaySection').classList.add('hidden');
-        document.getElementById('categoryFilters').classList.add('hidden');
-        document.getElementById('customizeSection').classList.remove('hidden');
-    } catch (error) {
-        console.error('Error selecting template:', error);
-        showError('Failed to load template for customization');
-    }
-}
-
-// Generate customization form based on template fields
-function generateCustomizationForm() {
-    const container = document.getElementById('fieldsContainer');
-    container.innerHTML = '';
+function selectTemplate(templateId) {
+    console.log('🎯 Template selected:', templateId);
     
-    if (templateFields.length === 0) {
-        container.innerHTML = `
-            <div class="alert alert-info text-center">
-                <i class="fas fa-info-circle"></i>
-                This template doesn't require any customization. You can generate it directly!
-            </div>
-        `;
+    const template = AppState.templates.find(t => t.id === templateId);
+    if (!template) {
+        console.error('❌ Template not found:', templateId);
         return;
     }
     
-    templateFields.forEach((field, index) => {
-        const fieldGroup = document.createElement('div');
-        fieldGroup.className = 'field-group';
-        
-        let fieldHTML = '';
-        
-        switch (field.type) {
-            case 'text':
-                fieldHTML = `
-                    <label class="field-label">${field.label || `Text Field ${index + 1}`}</label>
-                    <input type="text" class="form-control" name="text_${field.id}" 
-                           placeholder="${field.placeholder || 'Enter text'}" 
-                           ${field.required ? 'required' : ''}>
-                `;
-                break;
-                
-            case 'image':
-                fieldHTML = `
-                    <label class="field-label">${field.label || `Image Field ${index + 1}`}</label>
-                    <div class="custom-file-input" onclick="triggerFileInput('image_${field.id}')">
-                        <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
-                        <p class="mb-0">Click to upload image</p>
-                        <small class="text-muted">Supported: JPG, PNG, GIF</small>
-                    </div>
-                    <input type="file" id="image_${field.id}" name="userImage" 
-                           accept="image/*" style="display: none;" 
-                           onchange="handleFileSelect(this, 'image_${field.id}')"
-                           ${field.required ? 'required' : ''}>
-                `;
-                break;
-                
-            case 'logo':
-                fieldHTML = `
-                    <label class="field-label">${field.label || `Logo Field ${index + 1}`}</label>
-                    <div class="custom-file-input" onclick="triggerFileInput('logo_${field.id}')">
-                        <i class="fas fa-image fa-2x mb-2"></i>
-                        <p class="mb-0">Click to upload logo</p>
-                        <small class="text-muted">Supported: JPG, PNG, GIF</small>
-                    </div>
-                    <input type="file" id="logo_${field.id}" name="userLogo" 
-                           accept="image/*" style="display: none;" 
-                           onchange="handleFileSelect(this, 'logo_${field.id}')"
-                           ${field.required ? 'required' : ''}>
-                `;
-                break;
+    AppState.selectedTemplate = template;
+    
+    // Hide main content and show customization form
+    hideMainContent();
+    showCustomizationForm(template);
+}
+
+// Utility function to refresh data
+function refreshData() {
+    console.log('🔄 Refreshing data...');
+    loadData();
+}
+
+// Add refresh functionality to window
+window.refreshData = refreshData;
+
+// Add template selection to window
+window.selectTemplate = selectTemplate;
+
+// Hide main content sections
+function hideMainContent() {
+    const sections = ['categoriesSection', 'templatesSection'];
+    sections.forEach(sectionId => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            element.style.display = 'none';
         }
-        
-        fieldGroup.innerHTML = fieldHTML;
-        container.appendChild(fieldGroup);
     });
 }
 
-// Trigger file input
-function triggerFileInput(inputId) {
-    document.getElementById(inputId).click();
+// Show main content sections
+function showMainContent() {
+    const sections = ['categoriesSection', 'templatesSection'];
+    sections.forEach(sectionId => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            element.style.display = 'block';
+        }
+    });
 }
 
-// Handle file selection
-function handleFileSelect(input, fieldId) {
-    const fileDiv = input.previousElementSibling;
+// Show customization form
+function showCustomizationForm(template) {
+    console.log('🎨 Showing customization form for template:', template.name);
     
-    if (input.files && input.files[0]) {
-        const fileName = input.files[0].name;
-        fileDiv.classList.add('has-file');
-        fileDiv.innerHTML = `
-            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
-            <p class="mb-0 text-success">File selected: ${fileName}</p>
-            <small class="text-muted">Click to change</small>
+    const customizationSection = document.getElementById('customizationSection');
+    const customizationTitle = document.getElementById('customizationTitle');
+    const templatePreview = document.getElementById('templatePreview');
+    const customizationFields = document.getElementById('customizationFields');
+    
+    if (!customizationSection) {
+        console.error('❌ Customization section not found');
+        return;
+    }
+    
+    // Update title
+    if (customizationTitle) {
+        customizationTitle.textContent = `Customize "${template.name}"`;
+    }
+    
+    // Show template preview
+    if (templatePreview) {
+        const imagePath = template.image_path || '/images/default-template.jpg';
+        templatePreview.innerHTML = `
+            <img src="${imagePath}" 
+                 alt="${template.name}" 
+                 style="max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 0.25rem;"
+                 onerror="this.src='/images/default-template.jpg';">
         `;
     }
+    
+    // Generate customization fields
+    if (customizationFields && template.fields) {
+        customizationFields.innerHTML = '';
+        
+        template.fields.forEach((field, index) => {
+            const fieldHTML = createCustomizationField(field, index);
+            customizationFields.appendChild(fieldHTML);
+        });
+    }
+    
+    // Show customization section
+    customizationSection.style.display = 'block';
+    customizationSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Create customization field
+function createCustomizationField(field, index) {
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'form-group';
+    
+    const label = document.createElement('label');
+    label.textContent = field.label || field.name || `Field ${index + 1}`;
+    if (field.required) {
+        label.innerHTML += ' <span style="color: red;">*</span>';
+    }
+    
+    let inputHTML = '';
+    
+    if (field.type === 'text') {
+        inputHTML = `
+            <input type="text" 
+                   class="form-control" 
+                   name="${field.id || `field_${index}`}"
+                   placeholder="Enter ${field.label || field.name || 'text'}"
+                   ${field.required ? 'required' : ''}
+                   data-field-type="text"
+                   data-field-id="${field.id || `field_${index}`}"
+                   oninput="updateLivePreview()">
+        `;
+    } else if (field.type === 'image') {
+        inputHTML = `
+            <div class="file-upload">
+                <input type="file" 
+                       class="form-control" 
+                       name="${field.id || `field_${index}`}"
+                       accept="image/*"
+                       ${field.required ? 'required' : ''}
+                       data-field-type="image"
+                       data-field-id="${field.id || `field_${index}`}"
+                       onchange="handleImageUpload(this)">
+                <label class="file-upload-label" for="${field.id || `field_${index}`}">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <br><strong>Click to upload image</strong>
+                    <br><small>for ${field.label || field.name || 'image'}</small>
+                </label>
+                <div class="uploaded-image-preview" style="display: none;">
+                    <img src="" alt="Uploaded image">
+                    <div class="file-info"></div>
+                </div>
+            </div>
+        `;
+    } else {
+        // Default to text input
+        inputHTML = `
+            <input type="text" 
+                   class="form-control" 
+                   name="${field.id || `field_${index}`}"
+                   placeholder="Enter ${field.label || field.name || 'value'}"
+                   ${field.required ? 'required' : ''}
+                   data-field-type="text"
+                   data-field-id="${field.id || `field_${index}`}"
+                   oninput="updateLivePreview()">
+        `;
+    }
+    
+    fieldDiv.appendChild(label);
+    fieldDiv.innerHTML += inputHTML;
+    
+    return fieldDiv;
+}
+
+// Go back to templates
+function goBackToTemplates() {
+    console.log('⬅️ Going back to templates');
+    
+    const customizationSection = document.getElementById('customizationSection');
+    const generatedPosterSection = document.getElementById('generatedPosterSection');
+    
+    if (customizationSection) {
+        customizationSection.style.display = 'none';
+    }
+    if (generatedPosterSection) {
+        generatedPosterSection.style.display = 'none';
+    }
+    
+    showMainContent();
+}
+
+// Reset customization
+function resetCustomization() {
+    console.log('🔄 Resetting customization');
+    
+    const form = document.getElementById('posterCustomizationForm');
+    if (form) {
+        form.reset();
+    }
+    
+    // Reset all file upload fields
+    const fileUploads = document.querySelectorAll('.file-upload');
+    fileUploads.forEach(upload => {
+        const label = upload.querySelector('.file-upload-label');
+        const preview = upload.querySelector('.uploaded-image-preview');
+        const input = upload.querySelector('input[type="file"]');
+        
+        if (label && preview && input) {
+            // Reset label
+            label.classList.remove('has-file');
+            const fieldId = input.dataset.fieldId;
+            const fieldLabel = input.dataset.fieldLabel || 'image';
+            label.innerHTML = `
+                <i class="fas fa-cloud-upload-alt"></i>
+                <br><strong>Click to upload image</strong>
+                <br><small>for ${fieldLabel}</small>
+            `;
+            
+            // Hide preview
+            preview.style.display = 'none';
+            preview.querySelector('img').src = '';
+            preview.querySelector('.file-info').textContent = '';
+        }
+    });
+    
+    // Update live preview
+    updateLivePreview();
 }
 
 // Handle poster generation
 async function handlePosterGeneration(event) {
     event.preventDefault();
+    console.log('🎨 Generating poster...');
     
-    // Show loading
-    document.getElementById('customizeSection').classList.add('hidden');
-    document.getElementById('loadingSection').classList.remove('hidden');
+    if (!AppState.selectedTemplate) {
+        console.error('❌ No template selected');
+        alert('Please select a template first.');
+        return;
+    }
     
     try {
+        // Show loading state
+        showLoadingState('Generating your poster...');
+        
+        // Collect form data in the format expected by the server
         const formData = new FormData();
-        formData.append('templateId', selectedTemplate.id);
+        formData.append('templateId', AppState.selectedTemplate.id);
         
         // Collect text fields
         const textFields = {};
-        templateFields.forEach(field => {
-            if (field.type === 'text') {
-                const input = document.querySelector(`input[name="text_${field.id}"]`);
-                if (input && input.value) {
-                    textFields[field.id] = input.value;
-                }
+        const imageFiles = [];
+        const logoFiles = [];
+        
+        const inputs = document.querySelectorAll('#customizationFields input');
+        
+        inputs.forEach(input => {
+            const fieldId = input.dataset.fieldId;
+            const fieldType = input.dataset.fieldType;
+            
+            if (fieldType === 'image' && input.files.length > 0) {
+                // Add to images array for server
+                imageFiles.push(input.files[0]);
+                // Also store field reference
+                textFields[`${fieldId}_type`] = 'image';
+            } else if (fieldType === 'text' && input.value.trim()) {
+                // Store text field value
+                textFields[fieldId] = input.value.trim();
             }
         });
         
-        if (Object.keys(textFields).length > 0) {
-            formData.append('textFields', JSON.stringify(textFields));
-        }
+        // Append text fields as JSON
+        formData.append('textFields', JSON.stringify(textFields));
         
-        // Collect file uploads with correct field names
-        templateFields.forEach(field => {
-            if (field.type === 'image') {
-                const input = document.getElementById(`image_${field.id}`);
-                if (input && input.files[0]) {
-                    formData.append('images', input.files[0], `image_${field.id}`);
-                }
-            } else if (field.type === 'logo') {
-                const input = document.getElementById(`logo_${field.id}`);
-                if (input && input.files[0]) {
-                    formData.append('logos', input.files[0], `logo_${field.id}`);
-                }
-            }
+        // Append image files
+        imageFiles.forEach((file, index) => {
+            formData.append('images', file);
         });
         
-        // Temporary user details for generation
-        formData.append('user_name', 'temp');
-        formData.append('user_mobile', 'temp');
+        console.log('📤 Sending poster generation request...');
+        console.log('Template ID:', AppState.selectedTemplate.id);
+        console.log('Text fields:', textFields);
+        console.log('Image files:', imageFiles.length);
         
+        // Send request to server
         const response = await fetch('/api/generate-poster', {
             method: 'POST',
             body: formData
         });
         
-        // Check if response is JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const text = await response.text();
-            throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}...`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || `Server error: ${response.status}`);
         }
         
         const result = await response.json();
+        console.log('✅ Poster generated successfully:', result);
         
-        if (result.success) {
-            // Show download section
-            document.getElementById('loadingSection').classList.add('hidden');
-            document.getElementById('downloadSection').classList.remove('hidden');
-            
-            // Update step indicator
-            updateStepIndicator(4);
-            
-            // Show preview
-            document.getElementById('posterPreview').src = result.download_url;
-            
-            // Store download URL for later use
-            window.generatedPosterUrl = result.download_url;
-        } else {
-            throw new Error(result.error || 'Failed to generate poster');
-        }
+        // Hide loading state
+        hideLoadingState();
+        
+        // Show generated poster
+        showGeneratedPoster(result);
         
     } catch (error) {
-        console.error('Error generating poster:', error);
-        showError('Failed to generate poster: ' + error.message);
-        
-        // Go back to customize section
-        document.getElementById('loadingSection').classList.add('hidden');
-        document.getElementById('customizeSection').classList.remove('hidden');
+        console.error('❌ Error generating poster:', error);
+        hideLoadingState();
+        alert(`Failed to generate poster: ${error.message}`);
     }
 }
 
-// Handle download
-async function handleDownload(event) {
-    event.preventDefault();
+// Add form event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('posterCustomizationForm');
+    if (form) {
+        form.addEventListener('submit', handlePosterGeneration);
+    }
+});
+
+// Show loading state
+function showLoadingState(message = 'Loading...') {
+    // Create or show loading overlay
+    let loadingOverlay = document.getElementById('loadingOverlay');
+    if (!loadingOverlay) {
+        loadingOverlay = document.createElement('div');
+        loadingOverlay.id = 'loadingOverlay';
+        loadingOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+        `;
+        document.body.appendChild(loadingOverlay);
+    }
     
-    const userName = document.getElementById('userName').value;
-    const userMobile = document.getElementById('userMobile').value;
+    loadingOverlay.innerHTML = `
+        <div class="spinner" style="width: 3rem; height: 3rem; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;"></div>
+        <h3>${message}</h3>
+    `;
+    loadingOverlay.style.display = 'flex';
+}
+
+// Hide loading state
+function hideLoadingState() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+    }
+}
+
+// Show generated poster
+function showGeneratedPoster(result) {
+    console.log('🖼️ Showing generated poster:', result);
     
-    if (!userName || !userMobile) {
-        showError('Please enter your name and mobile number');
+    const customizationSection = document.getElementById('customizationSection');
+    const generatedPosterSection = document.getElementById('generatedPosterSection');
+    const generatedPosterImage = document.getElementById('generatedPosterImage');
+    const posterDetails = document.getElementById('posterDetails');
+    
+    if (customizationSection) {
+        customizationSection.style.display = 'none';
+    }
+    
+    if (generatedPosterSection) {
+        generatedPosterSection.style.display = 'block';
+    }
+    
+    if (generatedPosterImage && result.posterUrl) {
+        generatedPosterImage.src = result.posterUrl;
+        generatedPosterImage.alt = `Generated poster for ${AppState.selectedTemplate.name}`;
+    }
+    
+    if (posterDetails) {
+        posterDetails.innerHTML = `
+            <div class="detail-item">
+                <strong>Template:</strong> ${AppState.selectedTemplate.name}
+            </div>
+            <div class="detail-item">
+                <strong>Generated:</strong> ${new Date().toLocaleString()}
+            </div>
+            <div class="detail-item">
+                <strong>Filename:</strong> ${result.filename || 'poster.jpg'}
+            </div>
+        `;
+    }
+    
+    // Store generated poster data
+    AppState.generatedPoster = result;
+    
+    generatedPosterSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Download poster
+function downloadPoster() {
+    console.log('📥 Downloading poster...');
+    
+    if (!AppState.generatedPoster || !AppState.generatedPoster.posterUrl) {
+        alert('No poster available for download.');
         return;
     }
     
+    // Create download link
+    const link = document.createElement('a');
+    link.href = AppState.generatedPoster.posterUrl;
+    link.download = AppState.generatedPoster.filename || `poster_${AppState.selectedTemplate.name}_${Date.now()}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Generate new poster
+function generateNewPoster() {
+    console.log('🆕 Generating new poster...');
+    
+    // Go back to customization form
+    goBackToCustomization();
+}
+
+// Go back to customization
+function goBackToCustomization() {
+    console.log('⬅️ Going back to customization');
+    
+    const generatedPosterSection = document.getElementById('generatedPosterSection');
+    if (generatedPosterSection) {
+        generatedPosterSection.style.display = 'none';
+    }
+    
+    const customizationSection = document.getElementById('customizationSection');
+    if (customizationSection) {
+        customizationSection.style.display = 'block';
+    }
+}
+
+// Handle image upload
+function handleImageUpload(input) {
+    console.log('📸 Handling image upload...');
+    
+    const file = input.files[0];
+    if (!file) return;
+    
+    // Show uploaded image preview
+    const fileUploadContainer = input.closest('.file-upload');
+    const label = fileUploadContainer.querySelector('.file-upload-label');
+    const preview = fileUploadContainer.querySelector('.uploaded-image-preview');
+    const previewImg = preview.querySelector('img');
+    const fileInfo = preview.querySelector('.file-info');
+    
+    // Update label to show file is selected
+    label.classList.add('has-file');
+    label.innerHTML = `
+        <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
+        <br><strong>Image uploaded!</strong>
+        <br><small>Click to change</small>
+    `;
+    
+    // Create preview URL
+    const previewURL = URL.createObjectURL(file);
+    previewImg.src = previewURL;
+    fileInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    preview.style.display = 'block';
+    
+    // Update live preview
+    updateLivePreview();
+    
+    console.log('✅ Image uploaded and preview updated');
+}
+
+// Update live preview
+function updateLivePreview() {
+    console.log('🔄 Updating live preview...');
+    
+    if (!AppState.selectedTemplate) {
+        return;
+    }
+    
+    const templatePreview = document.getElementById('templatePreview');
+    if (!templatePreview) {
+        return;
+    }
+    
+    // Create a preview container with the template image
+    const imagePath = AppState.selectedTemplate.image_path || '/images/default-template.jpg';
+    let previewHTML = `
+        <div style="position: relative; display: inline-block; max-width: 100%;">
+            <img src="${imagePath}" 
+                 alt="${AppState.selectedTemplate.name}" 
+                 style="max-width: 100%; max-height: 200px; object-fit: contain; border-radius: 0.25rem;">
+            <div id="previewOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+        </div>
+    `;
+    
+    templatePreview.innerHTML = previewHTML;
+    
+    // Add text overlays for text fields
+    const inputs = document.querySelectorAll('#customizationFields input');
+    const overlay = document.getElementById('previewOverlay');
+    
+    if (overlay && AppState.selectedTemplate.fields) {
+        AppState.selectedTemplate.fields.forEach(field => {
+            if (field.type === 'text') {
+                const input = document.querySelector(`[data-field-id="${field.id}"]`);
+                if (input && input.value.trim()) {
+                    const textDiv = document.createElement('div');
+                    textDiv.style.cssText = `
+                        position: absolute;
+                        left: ${field.x}%;
+                        top: ${field.y}%;
+                        width: ${field.width}%;
+                        height: ${field.height}%;
+                        color: ${field.color || '#000000'};
+                        font-size: ${(field.fontSize || 24) * 0.25}px;
+                        font-weight: bold;
+                        display: flex;
+                        align-items: center;
+                        text-align: ${field.align || 'left'};
+                        overflow: hidden;
+                        text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+                        line-height: 1;
+                    `;
+                    textDiv.textContent = input.value;
+                    overlay.appendChild(textDiv);
+                }
+            } else if (field.type === 'image') {
+                const input = document.querySelector(`[data-field-id="${field.id}"]`);
+                if (input && input.files.length > 0) {
+                    const file = input.files[0];
+                    const previewURL = URL.createObjectURL(file);
+                    
+                    const imageDiv = document.createElement('div');
+                    imageDiv.style.cssText = `
+                        position: absolute;
+                        left: ${field.x}%;
+                        top: ${field.y}%;
+                        width: ${field.width}%;
+                        height: ${field.height}%;
+                        overflow: hidden;
+                        border-radius: 2px;
+                    `;
+                    
+                    const img = document.createElement('img');
+                    img.src = previewURL;
+                    img.style.cssText = `
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                    `;
+                    
+                    imageDiv.appendChild(img);
+                    overlay.appendChild(imageDiv);
+                }
+            }
+        });
+    }
+}
+
+// Show download modal
+function showDownloadModal() {
+    console.log('📥 Showing download modal...');
+    
+    const downloadModal = document.getElementById('downloadModal');
+    if (downloadModal) {
+        downloadModal.style.display = 'flex';
+    }
+}
+
+// Close download modal
+function closeDownloadModal() {
+    console.log('❌ Closing download modal...');
+    
+    const downloadModal = document.getElementById('downloadModal');
+    if (downloadModal) {
+        downloadModal.style.display = 'none';
+    }
+}
+
+// Process download with user information
+function processDownload() {
+    console.log('📥 Processing download with user information...');
+    
+    const userName = document.getElementById('userName').value.trim();
+    const userMobile = document.getElementById('userMobile').value.trim();
+    
+    // Validate required fields
+    if (!userName) {
+        alert('Please enter your name.');
+        return;
+    }
+    
+    if (!userMobile) {
+        alert('Please enter your mobile number.');
+        return;
+    }
+    
+    // Validate mobile number format
+    if (!/^[0-9]{10}$/.test(userMobile)) {
+        alert('Please enter a valid 10-digit mobile number.');
+        return;
+    }
+    
+    // Save user information and download
+    saveUserInfoAndDownload(userName, userMobile);
+}
+
+// Save user information and download poster
+async function saveUserInfoAndDownload(userName, userMobile) {
     try {
-        // Create download link
-        const link = document.createElement('a');
-        link.href = window.generatedPosterUrl;
-        link.download = `festival_poster_${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Show loading state
+        showLoadingState('Preparing download...');
+        
+        // Save user information to server
+        const userData = {
+            name: userName,
+            mobile: userMobile,
+            template_id: AppState.selectedTemplate.id,
+            template_name: AppState.selectedTemplate.name,
+            generated_at: new Date().toISOString()
+        };
+        
+        console.log('💾 Saving user information:', userData);
+        
+        // Send user data to server
+        try {
+            const response = await fetch('/api/track-download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData)
+            });
+            
+            if (response.ok) {
+                console.log('✅ User data saved successfully');
+            }
+        } catch (error) {
+            console.log('⚠️ Could not save user data:', error);
+        }
+        
+        // Hide loading state
+        hideLoadingState();
+        
+        // Close modal
+        closeDownloadModal();
+        
+        // Download the poster
+        downloadPoster();
         
         // Show success message
-        showSuccess('Poster downloaded successfully!');
-        
-        // Record download (optional - could be done server-side)
-        fetch('/api/record-download', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                template_id: selectedTemplate.id,
-                user_name: userName,
-                user_mobile: userMobile
-            })
-        }).catch(console.error);
+        alert(`Thank you ${userName}! Your poster has been downloaded.`);
         
     } catch (error) {
-        console.error('Error downloading poster:', error);
-        showError('Failed to download poster');
+        console.error('❌ Error processing download:', error);
+        hideLoadingState();
+        alert('Failed to process download. Please try again.');
     }
 }
 
-// Navigation functions
-function goBack() {
-    // Hide customization section and show template display
-    document.getElementById('customizeSection').classList.add('hidden');
-    document.getElementById('templateDisplaySection').classList.remove('hidden');
-    document.getElementById('categoryFilters').classList.remove('hidden');
-    updateStepIndicator(2);
-}
+// Add global functions
+window.goBackToTemplates = goBackToTemplates;
+window.resetCustomization = resetCustomization;
+window.downloadPoster = downloadPoster;
+window.generateNewPoster = generateNewPoster;
+window.goBackToCustomization = goBackToCustomization;
+window.updateLivePreview = updateLivePreview;
+window.handleImageUpload = handleImageUpload;
+window.showDownloadModal = showDownloadModal;
+window.closeDownloadModal = closeDownloadModal;
+window.processDownload = processDownload;
 
-function startOver() {
-    // Reset all selections
-    selectedCategory = null;
-    selectedTemplate = null;
-    templateFields = [];
-    
-    // Reset forms
-    document.getElementById('posterForm').reset();
-    document.getElementById('downloadForm').reset();
-    
-    // Show template display section
-    document.getElementById('downloadSection').classList.add('hidden');
-    document.getElementById('templateDisplaySection').classList.remove('hidden');
-    document.getElementById('categoryFilters').classList.remove('hidden');
-    
-    // Reset to show all templates
-    showAllTemplates();
-    
-    // Reset step indicator
-    updateStepIndicator(1);
-}
-
-// Update step indicator
-function updateStepIndicator(activeStep) {
-    for (let i = 1; i <= 4; i++) {
-        const step = document.getElementById(`step${i}`);
-        step.classList.remove('active', 'completed');
-        
-        if (i < activeStep) {
-            step.classList.add('completed');
-        } else if (i === activeStep) {
-            step.classList.add('active');
-        }
-    }
-}
-
-// Utility functions
-function showError(message) {
-    // Create and show error alert
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-danger alert-dismissible fade show position-fixed';
-    alert.style.top = '20px';
-    alert.style.right = '20px';
-    alert.style.zIndex = '9999';
-    alert.innerHTML = `
-        <i class="fas fa-exclamation-circle"></i> ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(alert);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        if (alert.parentNode) {
-            alert.parentNode.removeChild(alert);
-        }
-    }, 5000);
-}
-
-function showSuccess(message) {
-    // Create and show success alert
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-success alert-dismissible fade show position-fixed';
-    alert.style.top = '20px';
-    alert.style.right = '20px';
-    alert.style.zIndex = '9999';
-    alert.innerHTML = `
-        <i class="fas fa-check-circle"></i> ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(alert);
-    
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        if (alert.parentNode) {
-            alert.parentNode.removeChild(alert);
-        }
-    }, 3000);
-}
+console.log('🎉 Festival Poster Maker app.js loaded successfully');
