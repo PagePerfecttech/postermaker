@@ -413,25 +413,59 @@ app.post('/api/generate-poster', upload.fields([
         
         let posterUrl;
         if (process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
-            // Create a simple poster (placeholder for now, can be enhanced with image processing)
-            const posterBuffer = Buffer.from(`
+            // Create a proper poster with template background and user content
+            const templateFields = JSON.parse(template.fields);
+            let svgContent = `
                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="800" height="600" fill="#6366f1"/>
-                    <text x="400" y="300" text-anchor="middle" fill="white" font-size="48" font-family="Arial">
-                        Generated Poster
-                    </text>
-                    <text x="400" y="350" text-anchor="middle" fill="white" font-size="24" font-family="Arial">
+                    <!-- Template background -->
+                    <rect width="800" height="600" fill="#f8fafc"/>
+                    <rect x="50" y="50" width="700" height="500" fill="white" stroke="#e2e8f0" stroke-width="2" rx="10"/>
+                    
+                    <!-- Template name -->
+                    <text x="400" y="100" text-anchor="middle" fill="#1e293b" font-size="32" font-family="Arial, sans-serif" font-weight="bold">
                         ${template.name}
                     </text>
+                    
+                    <!-- User content -->
+                    <g transform="translate(100, 150)">
+            `;
+            
+            // Add user text fields
+            templateFields.forEach((field, index) => {
+                if (field.type === 'text' && parsedTextFields && parsedTextFields[field.id]) {
+                    const text = parsedTextFields[field.id];
+                    const x = (field.x / 100) * 600; // Scale to poster width
+                    const y = (field.y / 100) * 300; // Scale to poster height
+                    const fontSize = (field.fontSize || 24) * 0.8; // Scale font size
+                    
+                    svgContent += `
+                        <text x="${x}" y="${y}" fill="${field.color || '#1e293b'}" 
+                              font-size="${fontSize}" font-family="Arial, sans-serif" 
+                              font-weight="bold" text-anchor="left">
+                            ${text}
+                        </text>
+                    `;
+                }
+            });
+            
+            svgContent += `
+                    </g>
+                    
+                    <!-- Generated info -->
+                    <text x="400" y="550" text-anchor="middle" fill="#64748b" font-size="16" font-family="Arial, sans-serif">
+                        Generated Poster - ${new Date().toLocaleDateString()}
+                    </text>
                 </svg>
-            `);
+            `;
+            
+            const posterBuffer = Buffer.from(svgContent);
             
             // Upload to R2
             const uniqueFilename = generateUniqueFilename(outputFilename, 'generated/');
             posterUrl = await uploadToR2(uniqueFilename, posterBuffer, 'image/svg+xml');
         } else {
             // Fallback to placeholder if R2 not configured
-            posterUrl = `https://via.placeholder.com/800x600/6366f1/ffffff?text=Generated+Poster`;
+            posterUrl = `https://via.placeholder.com/800x600/6366f1/ffffff?text=Generated+Poster+for+${template.name}`;
         }
         
         res.json({ 

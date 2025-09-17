@@ -6,12 +6,8 @@ let fieldCounter = 0;
 
 // Initialize admin panel
 document.addEventListener('DOMContentLoaded', function() {
-    if (authToken) {
-        showDashboard();
-    } else {
-        showLogin();
-    }
-    
+    // Skip authentication - go directly to dashboard
+    showDashboard();
     setupEventListeners();
 });
 
@@ -68,30 +64,10 @@ function toggleMobileMenu() {
 async function handleLogin(event) {
     event.preventDefault();
     
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    
-    try {
-        const response = await fetch('/api/admin/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ username, password })
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            authToken = result.token;
-            localStorage.setItem('adminToken', authToken);
-            showDashboard();
-        } else {
-            showError(result.error || 'Login failed');
-        }
-    } catch (error) {
-        showError('Login failed: ' + error.message);
-    }
+    // Skip actual login - just show dashboard
+    authToken = 'no-auth-required';
+    localStorage.setItem('adminToken', authToken);
+    showDashboard();
 }
 
 function logout() {
