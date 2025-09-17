@@ -7,16 +7,29 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use service
 
 if (!supabaseUrl || !supabaseServiceKey) {
     console.error('Missing Supabase environment variables. Please check your .env file.');
-    process.exit(1);
+    console.log('Running in development mode with mock data...');
 }
 
 // Create Supabase client with service role key for server-side operations
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-        autoRefreshToken: false,
-        persistSession: false
-    }
-});
+let supabase;
+if (supabaseUrl && supabaseServiceKey) {
+    supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+} else {
+    // Mock supabase for development
+    supabase = {
+        from: () => ({
+            select: () => ({ data: [], error: null }),
+            insert: () => ({ data: [], error: null }),
+            update: () => ({ data: [], error: null }),
+            delete: () => ({ data: [], error: null })
+        })
+    };
+}
 
 // Database helper functions
 const db = {
@@ -44,6 +57,15 @@ const db = {
 
     // Category operations
     async getAllCategories() {
+        if (!supabaseUrl || !supabaseServiceKey) {
+            // Return mock data
+            return [
+                { id: '1', name: 'Festival', description: 'Festival posters' },
+                { id: '2', name: 'Event', description: 'Event posters' },
+                { id: '3', name: 'Business', description: 'Business posters' }
+            ];
+        }
+        
         const { data, error } = await supabase
             .from('categories')
             .select('*')
@@ -86,6 +108,33 @@ const db = {
 
     // Template operations
     async getAllTemplates() {
+        if (!supabaseUrl || !supabaseServiceKey) {
+            // Return mock data
+            return [
+                {
+                    id: '1',
+                    name: 'Sample Template 1',
+                    category_id: '1',
+                    image_path: 'https://via.placeholder.com/800x600/4f46e5/ffffff?text=Sample+Template+1',
+                    fields: JSON.stringify([
+                        { id: 'text1', type: 'text', x: 10, y: 20, width: 80, height: 10, fontSize: 24, color: '#000000' },
+                        { id: 'image1', type: 'image', x: 20, y: 40, width: 60, height: 40 }
+                    ]),
+                    categories: { id: '1', name: 'Festival' }
+                },
+                {
+                    id: '2',
+                    name: 'Sample Template 2',
+                    category_id: '2',
+                    image_path: 'https://via.placeholder.com/800x600/059669/ffffff?text=Sample+Template+2',
+                    fields: JSON.stringify([
+                        { id: 'text1', type: 'text', x: 15, y: 25, width: 70, height: 15, fontSize: 32, color: '#ffffff' }
+                    ]),
+                    categories: { id: '2', name: 'Event' }
+                }
+            ];
+        }
+        
         const { data, error } = await supabase
             .from('templates')
             .select(`

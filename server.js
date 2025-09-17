@@ -2,15 +2,12 @@ const express = require('express');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Jimp = require('jimp');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { db, supabase } = require('./supabase-config');
-// R2 config removed for Vercel compatibility
-// const { uploadToR2, deleteFromR2, generateUniqueFilename, getMimeType } = require('./r2-config');
 require('dotenv').config();
 
 const app = express();
