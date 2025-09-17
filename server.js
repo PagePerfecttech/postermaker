@@ -35,7 +35,19 @@ app.use((req, res, next) => {
 
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.static('public'));
+
+// Serve static files with proper MIME types
+app.use(express.static('public', {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        } else if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        } else if (path.endsWith('.html')) {
+            res.setHeader('Content-Type', 'text/html');
+        }
+    }
+}));
 
 // Serve uploaded files statically (disabled for Vercel serverless)
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -474,6 +486,17 @@ app.post('/api/track-download', async (req, res) => {
         console.error('Error tracking download:', error);
         res.status(500).json({ error: 'Failed to track download' });
     }
+});
+
+// Serve JavaScript files with correct MIME type
+app.get('/app.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(__dirname, 'public', 'app.js'));
+});
+
+app.get('/admin.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(__dirname, 'public', 'admin.js'));
 });
 
 // Serve main page
