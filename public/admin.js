@@ -126,11 +126,7 @@ async function loadDashboardData() {
         const [categories, templates, downloads] = await Promise.all([
             fetch('/api/categories').then(r => r.json()),
             fetch('/api/templates').then(r => r.json()),
-            fetch('/api/admin/downloads', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-                }
-            }).then(r => r.ok ? r.json() : [])
+            fetch('/api/admin/downloads').then(r => r.ok ? r.json() : [])
         ]);
         
         document.getElementById('categoriesCount').textContent = categories.length;
@@ -207,8 +203,7 @@ async function handleAddCategory(event) {
         const response = await fetch('/api/categories', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(categoryData)
         });
@@ -571,7 +566,6 @@ async function handleAddTemplate(event) {
         const response = await fetch('/api/templates', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${authToken}`
             },
             body: formData
         });
@@ -592,11 +586,7 @@ async function handleAddTemplate(event) {
 // Downloads management
 async function loadDownloads() {
     try {
-        const response = await fetch('/api/admin/downloads', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-            }
-        });
+        const response = await fetch('/api/admin/downloads');
         
         if (!response.ok) {
             throw new Error('Failed to fetch downloads');
@@ -648,19 +638,23 @@ async function loadDownloads() {
 // Template management functions
 async function editTemplate(templateId) {
     try {
-        const response = await fetch(`/api/admin/templates/${templateId}`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            }
-        });
+        const response = await fetch(`/api/admin/templates/${templateId}`);
         
         if (!response.ok) {
             throw new Error('Failed to fetch template');
         }
         
         const template = await response.json();
+        console.log('📄 Template loaded for editing:', template);
         currentTemplate = template;
-        templateFields = JSON.parse(template.fields || '[]');
+        
+        try {
+            templateFields = JSON.parse(template.fields || '[]');
+            console.log('✅ Template fields parsed:', templateFields);
+        } catch (error) {
+            console.error('❌ Error parsing template fields:', error);
+            templateFields = [];
+        }
         
         // Switch to template editor tab
         document.querySelector('[data-bs-target="#templateEditor"]').click();
@@ -702,10 +696,7 @@ async function deleteTemplate(templateId) {
     
     try {
         const response = await fetch(`/api/admin/templates/${templateId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            }
+            method: 'DELETE'
         });
         
         if (!response.ok) {
