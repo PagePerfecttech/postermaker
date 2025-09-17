@@ -24,11 +24,18 @@ This guide covers multiple deployment options for the Festival Poster Maker PWA 
 
 4. **Set Environment Variables in Vercel Dashboard**
    - Go to your project settings in Vercel
-   - Add the following environment variables:
-     - `SUPABASE_URL`: Your Supabase project URL
-     - `SUPABASE_ANON_KEY`: Your Supabase anonymous key
-     - `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase service role key
-     - `JWT_SECRET`: A secure random string
+   - Navigate to Settings > Environment Variables
+   - Add the following environment variables (copy from your .env file):
+     - `SUPABASE_URL`: `https://ufetjazodulmtoydfziq.supabase.co`
+     - `SUPABASE_ANON_KEY`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmZXRqYXpvZHVsbXRveWRmemlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwOTQ2NTgsImV4cCI6MjA3MzY3MDY1OH0.-cHVbuLBbu47yqA0sqq2JOrVR6C6QLllrsczLqJWbvg`
+     - `SUPABASE_SERVICE_ROLE_KEY`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmZXRqYXpvZHVsbXRveWRmemlxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODA5NDY1OCwiZXhwIjoyMDczNjcwNjU4fQ.XSXnuoEQRZkitR00gSQD1YOyyC5k_3bcfUnwOZ4ssDY`
+     - `JWT_SECRET`: `festival_poster_maker_jwt_secret_2024`
+     - `R2_ACCOUNT_ID`: `4ab691f283d3b63c6ce3a49e4f33f298`
+     - `R2_ACCESS_KEY_ID`: `8d0b77e03d5b402cb807ab9c80197461`
+     - `R2_SECRET_ACCESS_KEY`: `e1d90bb4a30744c298bf6a8e9247c585053192a43626d9270cd68d09d94f8a6f`
+     - `R2_BUCKET_NAME`: `vposter`
+     - `R2_PUBLIC_URL`: `https://pub-830ea165a09745e3bd29563681b0bdc2.r2.dev`
+     - `R2_ENDPOINT`: `https://4ab691f283d3b63c6ce3a49e4f33f298.r2.cloudflarestorage.com`
 
 ### Option 2: Netlify
 
