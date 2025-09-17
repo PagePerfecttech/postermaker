@@ -1,6 +1,6 @@
-# Festival Poster Maker - Supabase Migration
+# Festival Poster Maker - PWA Edition
 
-A web application for creating custom festival posters with dynamic text, images, and logos. This project has been migrated from SQLite to Supabase for better scalability and cloud-based data management.
+A modern web application for creating custom festival posters with dynamic text, images, and logos. This project features a mobile-friendly design, PWA capabilities, and is powered by Supabase for scalable cloud-based data management.
 
 ## 🚀 Features
 
@@ -9,6 +9,8 @@ A web application for creating custom festival posters with dynamic text, images
 - **Dynamic Content**: Add custom text, images, and logos to templates
 - **Admin Panel**: Secure admin interface for template and category management
 - **Cloud Database**: Powered by Supabase for reliable data storage
+- **PWA Support**: Installable web app with offline capabilities
+- **Mobile-Friendly**: Responsive design optimized for all devices
 - **Real-time Operations**: Fast CRUD operations with Supabase client
 
 ## 📋 Prerequisites
@@ -22,8 +24,8 @@ A web application for creating custom festival posters with dynamic text, images
 ### 1. Clone and Install Dependencies
 
 ```bash
-git clone <your-repo-url>
-cd freeposter
+git clone https://github.com/PagePerfecttech/postermaker.git
+cd postermaker
 npm install
 ```
 
@@ -47,8 +49,7 @@ npm install
    SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
    JWT_SECRET=your_secure_jwt_secret
    PORT=3000
-   NODE_ENV=development
-   ```
+```
 
 ### 4. Database Migration (Optional)
 
@@ -74,15 +75,31 @@ The application will be available at:
 - Main app: http://localhost:3000
 - Admin panel: http://localhost:3000/admin
 
+## 📱 PWA Features
+
+This application is a Progressive Web App (PWA) with the following features:
+
+- **Installable**: Can be installed on mobile devices and desktops
+- **Offline Support**: Service worker caches resources for offline use
+- **Mobile Optimized**: Responsive design with touch-friendly interface
+- **App-like Experience**: Standalone display mode when installed
+
+To install the app:
+1. Visit the website on your mobile device
+2. Look for the "Add to Home Screen" prompt
+3. Or use the browser's install option
+
 ## 📁 Project Structure
 
 ```
-freeposter/
+postermaker/
 ├── public/                 # Frontend files
 │   ├── index.html         # Main application
 │   ├── admin.html         # Admin panel
 │   ├── app.js            # Main app JavaScript
-│   └── admin.js          # Admin panel JavaScript
+│   ├── admin.js          # Admin panel JavaScript
+│   ├── manifest.json     # PWA manifest
+│   └── sw.js             # Service worker
 ├── uploads/               # File uploads
 │   ├── templates/        # Template images
 │   └── generated/        # Generated posters
@@ -154,6 +171,8 @@ This project was successfully migrated from SQLite to Supabase with the followin
 - ✅ Added proper error handling
 - ✅ Maintained backward compatibility
 - ✅ Created migration script for existing data
+- ✅ Added PWA capabilities with service worker and manifest
+- ✅ Implemented mobile-friendly responsive design
 
 ## 🤝 Contributing
 
@@ -188,5 +207,10 @@ This project is licensed under the MIT License.
 4. **Admin login not working**
    - Run the migration script to create admin user
    - Or manually insert admin user in Supabase dashboard
+
+5. **PWA not installing**
+   - Ensure you're using HTTPS (required for PWA)
+   - Check that manifest.json is accessible
+   - Verify service worker is registered correctly
 
 For more help, check the console logs or run the test script to diagnose issues.
