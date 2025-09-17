@@ -1,0 +1,41 @@
+{
+  "name": "festival-poster-maker",
+  "version": "1.0.0",
+  "description": "A web application for creating festival posters with admin template management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "npm run build:client",
+    "build:client": "webpack --mode production"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.890.0",
+    "@aws-sdk/s3-request-presigner": "^3.890.0",
+    "@supabase/supabase-js": "^2.57.4",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "jimp": "^0.22.8",
+    "jsonwebtoken": "^9.0.0",
+    "multer": "^1.4.4",
+    "sqlite3": "^5.1.6",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "keywords": [
+    "poster",
+    "festival",
+    "template",
+    "generator"
+  ],
+  "author": "Festival Poster Maker",
+  "license": "MIT"
+}

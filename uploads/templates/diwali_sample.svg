@@ -1,0 +1,49 @@
+<svg width="800" height="1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B35;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F7931E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFD23F;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="1200" fill="url(#bg)"/>
+  
+  <!-- Decorative border -->
+  <rect x="20" y="20" width="760" height="1160" fill="none" stroke="#8B4513" stroke-width="8" rx="20"/>
+  
+  <!-- Title area -->
+  <rect x="50" y="80" width="700" height="120" fill="rgba(255,255,255,0.9)" rx="15"/>
+  <text x="400" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#8B4513">Happy Diwali</text>
+  
+  <!-- Diya decorations -->
+  <circle cx="150" cy="300" r="30" fill="#FFD700"/>
+  <ellipse cx="150" cy="320" rx="35" ry="15" fill="#FF6B35"/>
+  <rect x="145" y="305" width="10" height="20" fill="#FF4500"/>
+  
+  <circle cx="650" cy="300" r="30" fill="#FFD700"/>
+  <ellipse cx="650" cy="320" rx="35" ry="15" fill="#FF6B35"/>
+  <rect x="645" y="305" width="10" height="20" fill="#FF4500"/>
+  
+  <!-- Logo placeholder -->
+  <rect x="300" y="400" width="200" height="200" fill="rgba(255,255,255,0.8)" stroke="#8B4513" stroke-width="3" stroke-dasharray="10,5" rx="10"/>
+  <text x="400" y="510" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#8B4513">Your Logo Here</text>
+  
+  <!-- Message area -->
+  <rect x="80" y="650" width="640" height="200" fill="rgba(255,255,255,0.9)" rx="15"/>
+  <text x="400" y="720" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#8B4513">Festival Greetings</text>
+  <text x="400" y="770" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#8B4513">May this Diwali bring joy and prosperity</text>
+  <text x="400" y="810" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#8B4513">to your home and family</text>
+  
+  <!-- Contact info area -->
+  <rect x="80" y="900" width="640" height="150" fill="rgba(255,255,255,0.8)" rx="15"/>
+  <text x="400" y="950" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#8B4513">Your Business Name</text>
+  <text x="400" y="990" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#8B4513">Contact: +91 XXXXX XXXXX</text>
+  <text x="400" y="1020" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#8B4513">www.yourbusiness.com</text>
+  
+  <!-- Decorative elements -->
+  <polygon points="400,250 420,290 460,290 430,315 440,355 400,330 360,355 370,315 340,290 380,290" fill="#FFD700"/>
+  <polygon points="200,950 210,970 230,970 215,985 220,1005 200,990 180,1005 185,985 170,970 190,970" fill="#FFD700"/>
+  <polygon points="600,950 610,970 630,970 615,985 620,1005 600,990 580,1005 585,985 570,970 590,970" fill="#FFD700"/>
+</svg>

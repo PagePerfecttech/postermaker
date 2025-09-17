@@ -1,0 +1,54 @@
+<svg width="800" height="1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ganeshBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF8C00;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FF6347;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DC143C;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="1200" fill="url(#ganeshBg)"/>
+  
+  <!-- Decorative border -->
+  <rect x="30" y="30" width="740" height="1140" fill="none" stroke="#FFD700" stroke-width="6" rx="25"/>
+  <rect x="40" y="40" width="720" height="1120" fill="none" stroke="#FFFF00" stroke-width="3" rx="20"/>
+  
+  <!-- Title area -->
+  <rect x="60" y="80" width="680" height="140" fill="rgba(255,255,255,0.95)" rx="20"/>
+  <text x="400" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#DC143C">Ganpati Bappa Morya</text>
+  <text x="400" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#FF6347">Ganesh Chaturthi</text>
+  
+  <!-- Om symbol -->
+  <text x="400" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#FFD700">ॐ</text>
+  
+  <!-- Logo placeholder -->
+  <rect x="300" y="350" width="200" height="200" fill="rgba(255,255,255,0.9)" stroke="#DC143C" stroke-width="4" stroke-dasharray="12,8" rx="15"/>
+  <text x="400" y="460" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#DC143C">Your Logo Here</text>
+  
+  <!-- Blessing message -->
+  <rect x="80" y="600" width="640" height="200" fill="rgba(255,255,255,0.95)" rx="20"/>
+  <text x="400" y="650" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#DC143C">Mangal Murti Morya</text>
+  <text x="400" y="700" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#FF6347">May Lord Ganesha bless you with</text>
+  <text x="400" y="740" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#FF6347">wisdom, prosperity and happiness</text>
+  <text x="400" y="780" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#FF8C00">Ganpati Bappa Morya!</text>
+  
+  <!-- Business details -->
+  <rect x="80" y="850" width="640" height="160" fill="rgba(255,255,255,0.9)" rx="20"/>
+  <text x="400" y="900" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#DC143C">Your Business Name</text>
+  <text x="400" y="940" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#FF6347">Contact: +91 XXXXX XXXXX</text>
+  <text x="400" y="975" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#FF6347">Address: Your Business Address</text>
+  
+  <!-- Decorative elements -->
+  <circle cx="150" cy="320" r="25" fill="#FFD700" opacity="0.8"/>
+  <circle cx="650" cy="320" r="25" fill="#FFD700" opacity="0.8"/>
+  
+  <!-- Lotus petals -->
+  <ellipse cx="120" cy="500" rx="30" ry="15" fill="#FFD700" opacity="0.7" transform="rotate(45 120 500)"/>
+  <ellipse cx="680" cy="500" rx="30" ry="15" fill="#FFD700" opacity="0.7" transform="rotate(-45 680 500)"/>
+  
+  <!-- Traditional patterns -->
+  <polygon points="400,1050 420,1080 440,1050 420,1020" fill="#FFD700"/>
+  <polygon points="360,1050 380,1080 400,1050 380,1020" fill="#FFFF00"/>
+  <polygon points="440,1050 460,1080 480,1050 460,1020" fill="#FFFF00"/>
+</svg>
