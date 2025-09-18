@@ -428,68 +428,55 @@ app.post('/api/generate-poster', upload.fields([
             const colors = categoryColors[template.categories?.name] || categoryColors.default;
             
             let svgContent = `
-                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                     <defs>
-                        <!-- Gradient definitions -->
-                        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:${colors.bg};stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:${colors.accent};stop-opacity:1" />
-                        </linearGradient>
-                        <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:rgba(255,255,255,0.95);stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:rgba(255,255,255,0.85);stop-opacity:1" />
-                        </linearGradient>
-                        <!-- Shadow filter -->
-                        <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.3)"/>
+                        <!-- Shadow filter for text -->
+                        <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="rgba(0,0,0,0.5)"/>
+                        </filter>
+                        <!-- Glow filter for text -->
+                        <filter id="textGlow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                            <feMerge> 
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
                         </filter>
                     </defs>
                     
-                    <!-- Background with gradient -->
-                    <rect width="800" height="600" fill="url(#bgGradient)"/>
+                    <!-- Template background image -->
+                    <image href="${template.image_path}" x="0" y="0" width="800" height="600" 
+                           preserveAspectRatio="xMidYMid slice" opacity="0.9"/>
                     
-                    <!-- Decorative elements -->
-                    <circle cx="100" cy="100" r="60" fill="rgba(255,255,255,0.1)"/>
-                    <circle cx="700" cy="500" r="80" fill="rgba(255,255,255,0.1)"/>
-                    <circle cx="650" cy="150" r="40" fill="rgba(255,255,255,0.15)"/>
-                    
-                    <!-- Main content card -->
-                    <rect x="50" y="50" width="700" height="500" fill="url(#cardGradient)" 
-                          stroke="rgba(255,255,255,0.3)" stroke-width="2" rx="20" filter="url(#shadow)"/>
-                    
-                    <!-- Template title with better styling -->
-                    <text x="400" y="120" text-anchor="middle" fill="${colors.text}" 
-                          font-size="36" font-family="Arial, sans-serif" font-weight="bold">
-                        ${template.name}
-                    </text>
-                    
-                    <!-- Decorative line under title -->
-                    <line x1="300" y1="140" x2="500" y2="140" stroke="${colors.bg}" stroke-width="3" stroke-linecap="round"/>
+                    <!-- Overlay for better text readability -->
+                    <rect width="800" height="600" fill="rgba(0,0,0,0.2)"/>
                     
                     <!-- User content area -->
-                    <g transform="translate(100, 180)">
+                    <g transform="translate(0, 0)">
             `;
             
-            // Add user text fields with better styling
+            // Add user text fields with better styling for template overlay
             templateFields.forEach((field, index) => {
                 if (field.type === 'text' && parsedTextFields && parsedTextFields[field.id]) {
                     const text = parsedTextFields[field.id];
-                    const x = (field.x / 100) * 600; // Scale to poster width
-                    const y = (field.y / 100) * 300; // Scale to poster height
-                    const fontSize = Math.max((field.fontSize || 24) * 0.8, 16); // Scale font size with minimum
-                    const textColor = field.color || colors.text;
+                    const x = (field.x / 100) * 800; // Scale to full poster width
+                    const y = (field.y / 100) * 600; // Scale to full poster height
+                    const fontSize = Math.max((field.fontSize || 24) * 1.2, 18); // Larger font for visibility
+                    const textColor = field.color || '#ffffff'; // Default to white for visibility
                     const textAlign = field.textAlign || 'left';
                     
-                    // Add text shadow for better readability
+                    // Add text with shadow and glow for better visibility over template
                     svgContent += `
-                        <text x="${x}" y="${y - 1}" fill="rgba(0,0,0,0.3)" 
+                        <!-- Text shadow -->
+                        <text x="${x + 2}" y="${y + 2}" fill="rgba(0,0,0,0.8)" 
                               font-size="${fontSize}" font-family="Arial, sans-serif" 
-                              font-weight="bold" text-anchor="${textAlign}">
+                              font-weight="bold" text-anchor="${textAlign}" filter="url(#textShadow)">
                             ${text}
                         </text>
+                        <!-- Main text with glow -->
                         <text x="${x}" y="${y}" fill="${textColor}" 
                               font-size="${fontSize}" font-family="Arial, sans-serif" 
-                              font-weight="bold" text-anchor="${textAlign}">
+                              font-weight="bold" text-anchor="${textAlign}" filter="url(#textGlow)">
                             ${text}
                         </text>
                     `;
@@ -499,10 +486,10 @@ app.post('/api/generate-poster', upload.fields([
             svgContent += `
                     </g>
                     
-                    <!-- Footer with generated date -->
-                    <rect x="50" y="520" width="700" height="30" fill="rgba(0,0,0,0.1)" rx="15"/>
-                    <text x="400" y="540" text-anchor="middle" fill="${colors.text}" 
-                          font-size="14" font-family="Arial, sans-serif" font-weight="500">
+                    <!-- Footer with generated date - positioned at bottom -->
+                    <rect x="0" y="570" width="800" height="30" fill="rgba(0,0,0,0.7)" rx="0"/>
+                    <text x="400" y="590" text-anchor="middle" fill="#ffffff" 
+                          font-size="12" font-family="Arial, sans-serif" font-weight="500" filter="url(#textShadow)">
                         Generated on ${new Date().toLocaleDateString('en-US', { 
                             year: 'numeric', month: 'long', day: 'numeric' 
                         })} at ${new Date().toLocaleTimeString('en-US', { 
