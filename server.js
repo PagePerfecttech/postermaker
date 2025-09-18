@@ -413,53 +413,82 @@ app.post('/api/generate-poster', upload.fields([
         
         let posterUrl;
         if (process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
-            // Create poster with template image as background
+            // Create a simple poster that works reliably
             const templateFields = JSON.parse(template.fields);
             
+            // Choose colors based on template category
+            const categoryColors = {
+                'Festival': { bg: '#ff6b6b', accent: '#ffd93d', text: '#2c3e50' },
+                'Event': { bg: '#4ecdc4', accent: '#45b7d1', text: '#2c3e50' },
+                'Business': { bg: '#96ceb4', accent: '#feca57', text: '#2c3e50' },
+                'Religious': { bg: '#a8e6cf', accent: '#ffd3a5', text: '#2c3e50' },
+                'default': { bg: '#667eea', accent: '#764ba2', text: '#ffffff' }
+            };
+            
+            const colors = categoryColors[template.categories?.name] || categoryColors.default;
+            
             let svgContent = `
-                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
                     <defs>
-                        <!-- Text shadow filter -->
-                        <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.8)"/>
-                        </filter>
-                        <!-- Text outline filter -->
-                        <filter id="textOutline" x="-50%" y="-50%" width="200%" height="200%">
-                            <feMorphology operator="dilate" radius="1"/>
-                            <feFlood flood-color="rgba(0,0,0,0.8)"/>
-                            <feComposite in="SourceGraphic"/>
+                        <!-- Gradient definitions -->
+                        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:${colors.bg};stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:${colors.accent};stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:rgba(255,255,255,0.95);stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:rgba(255,255,255,0.85);stop-opacity:1" />
+                        </linearGradient>
+                        <!-- Shadow filter -->
+                        <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.3)"/>
                         </filter>
                     </defs>
                     
-                    <!-- Template background image -->
-                    <image href="${template.image_path}" x="0" y="0" width="800" height="600" 
-                           preserveAspectRatio="xMidYMid slice"/>
+                    <!-- Background with gradient -->
+                    <rect width="800" height="600" fill="url(#bgGradient)"/>
                     
-                    <!-- User content overlay -->
-                    <g>
+                    <!-- Decorative elements -->
+                    <circle cx="100" cy="100" r="60" fill="rgba(255,255,255,0.1)"/>
+                    <circle cx="700" cy="500" r="80" fill="rgba(255,255,255,0.1)"/>
+                    <circle cx="650" cy="150" r="40" fill="rgba(255,255,255,0.15)"/>
+                    
+                    <!-- Main content card -->
+                    <rect x="50" y="50" width="700" height="500" fill="url(#cardGradient)" 
+                          stroke="rgba(255,255,255,0.3)" stroke-width="2" rx="20" filter="url(#shadow)"/>
+                    
+                    <!-- Template title -->
+                    <text x="400" y="120" text-anchor="middle" fill="${colors.text}" 
+                          font-size="36" font-family="Arial, sans-serif" font-weight="bold">
+                        ${template.name}
+                    </text>
+                    
+                    <!-- Decorative line under title -->
+                    <line x1="300" y1="140" x2="500" y2="140" stroke="${colors.bg}" stroke-width="3" stroke-linecap="round"/>
+                    
+                    <!-- User content area -->
+                    <g transform="translate(100, 180)">
             `;
             
-            // Add user text fields positioned over the template image
+            // Add user text fields with simple, clean styling
             templateFields.forEach((field, index) => {
                 if (field.type === 'text' && parsedTextFields && parsedTextFields[field.id]) {
                     const text = parsedTextFields[field.id];
-                    const x = (field.x / 100) * 800; // Scale to full poster width
-                    const y = (field.y / 100) * 600; // Scale to full poster height
-                    const fontSize = Math.max((field.fontSize || 24) * 1.0, 16); // Use original font size
-                    const textColor = field.color || '#ffffff'; // Default to white for visibility
+                    const x = (field.x / 100) * 600; // Scale to poster width
+                    const y = (field.y / 100) * 300; // Scale to poster height
+                    const fontSize = Math.max((field.fontSize || 24) * 0.8, 16); // Scale font size
+                    const textColor = field.color || colors.text;
                     const textAlign = field.align || 'left';
                     
-                    // Add text with strong shadow for visibility over template
+                    // Simple text with shadow for readability
                     svgContent += `
-                        <!-- Text shadow for visibility -->
-                        <text x="${x + 3}" y="${y + 3}" fill="rgba(0,0,0,0.9)" 
-                              font-size="${fontSize}" font-family="${field.fontFamily || 'Arial'}, sans-serif" 
-                              font-weight="bold" text-anchor="${textAlign}" filter="url(#textShadow)">
+                        <text x="${x + 1}" y="${y + 1}" fill="rgba(0,0,0,0.3)" 
+                              font-size="${fontSize}" font-family="Arial, sans-serif" 
+                              font-weight="bold" text-anchor="${textAlign}">
                             ${text}
                         </text>
-                        <!-- Main text -->
                         <text x="${x}" y="${y}" fill="${textColor}" 
-                              font-size="${fontSize}" font-family="${field.fontFamily || 'Arial'}, sans-serif" 
+                              font-size="${fontSize}" font-family="Arial, sans-serif" 
                               font-weight="bold" text-anchor="${textAlign}">
                             ${text}
                         </text>
