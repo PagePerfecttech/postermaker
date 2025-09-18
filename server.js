@@ -33,8 +33,8 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+app.use(bodyParser.json({ limit: '4mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '4mb' }));
 
 // Serve static files with proper MIME types
 app.use(express.static('public', {
@@ -68,7 +68,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    limits: { fileSize: 4 * 1024 * 1024 }, // 4MB limit (Vercel compatible)
     fileFilter: (req, file, cb) => {
         console.log('File validation - Original name:', file.originalname);
         console.log('File validation - MIME type:', file.mimetype);
@@ -413,35 +413,83 @@ app.post('/api/generate-poster', upload.fields([
         
         let posterUrl;
         if (process.env.R2_ENDPOINT && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
-            // Create a proper poster with template background and user content
+            // Create a beautiful poster with gradient background and professional styling
             const templateFields = JSON.parse(template.fields);
+            
+            // Choose colors based on template category
+            const categoryColors = {
+                'Festival': { bg: '#ff6b6b', accent: '#ffd93d', text: '#2c3e50' },
+                'Event': { bg: '#4ecdc4', accent: '#45b7d1', text: '#2c3e50' },
+                'Business': { bg: '#96ceb4', accent: '#feca57', text: '#2c3e50' },
+                'Religious': { bg: '#a8e6cf', accent: '#ffd3a5', text: '#2c3e50' },
+                'default': { bg: '#667eea', accent: '#764ba2', text: '#ffffff' }
+            };
+            
+            const colors = categoryColors[template.categories?.name] || categoryColors.default;
+            
             let svgContent = `
                 <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Template background -->
-                    <rect width="800" height="600" fill="#f8fafc"/>
-                    <rect x="50" y="50" width="700" height="500" fill="white" stroke="#e2e8f0" stroke-width="2" rx="10"/>
+                    <defs>
+                        <!-- Gradient definitions -->
+                        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:${colors.bg};stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:${colors.accent};stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:rgba(255,255,255,0.95);stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:rgba(255,255,255,0.85);stop-opacity:1" />
+                        </linearGradient>
+                        <!-- Shadow filter -->
+                        <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.3)"/>
+                        </filter>
+                    </defs>
                     
-                    <!-- Template name -->
-                    <text x="400" y="100" text-anchor="middle" fill="#1e293b" font-size="32" font-family="Arial, sans-serif" font-weight="bold">
+                    <!-- Background with gradient -->
+                    <rect width="800" height="600" fill="url(#bgGradient)"/>
+                    
+                    <!-- Decorative elements -->
+                    <circle cx="100" cy="100" r="60" fill="rgba(255,255,255,0.1)"/>
+                    <circle cx="700" cy="500" r="80" fill="rgba(255,255,255,0.1)"/>
+                    <circle cx="650" cy="150" r="40" fill="rgba(255,255,255,0.15)"/>
+                    
+                    <!-- Main content card -->
+                    <rect x="50" y="50" width="700" height="500" fill="url(#cardGradient)" 
+                          stroke="rgba(255,255,255,0.3)" stroke-width="2" rx="20" filter="url(#shadow)"/>
+                    
+                    <!-- Template title with better styling -->
+                    <text x="400" y="120" text-anchor="middle" fill="${colors.text}" 
+                          font-size="36" font-family="Arial, sans-serif" font-weight="bold">
                         ${template.name}
                     </text>
                     
-                    <!-- User content -->
-                    <g transform="translate(100, 150)">
+                    <!-- Decorative line under title -->
+                    <line x1="300" y1="140" x2="500" y2="140" stroke="${colors.bg}" stroke-width="3" stroke-linecap="round"/>
+                    
+                    <!-- User content area -->
+                    <g transform="translate(100, 180)">
             `;
             
-            // Add user text fields
+            // Add user text fields with better styling
             templateFields.forEach((field, index) => {
                 if (field.type === 'text' && parsedTextFields && parsedTextFields[field.id]) {
                     const text = parsedTextFields[field.id];
                     const x = (field.x / 100) * 600; // Scale to poster width
                     const y = (field.y / 100) * 300; // Scale to poster height
-                    const fontSize = (field.fontSize || 24) * 0.8; // Scale font size
+                    const fontSize = Math.max((field.fontSize || 24) * 0.8, 16); // Scale font size with minimum
+                    const textColor = field.color || colors.text;
+                    const textAlign = field.textAlign || 'left';
                     
+                    // Add text shadow for better readability
                     svgContent += `
-                        <text x="${x}" y="${y}" fill="${field.color || '#1e293b'}" 
+                        <text x="${x}" y="${y - 1}" fill="rgba(0,0,0,0.3)" 
                               font-size="${fontSize}" font-family="Arial, sans-serif" 
-                              font-weight="bold" text-anchor="left">
+                              font-weight="bold" text-anchor="${textAlign}">
+                            ${text}
+                        </text>
+                        <text x="${x}" y="${y}" fill="${textColor}" 
+                              font-size="${fontSize}" font-family="Arial, sans-serif" 
+                              font-weight="bold" text-anchor="${textAlign}">
                             ${text}
                         </text>
                     `;
@@ -451,9 +499,15 @@ app.post('/api/generate-poster', upload.fields([
             svgContent += `
                     </g>
                     
-                    <!-- Generated info -->
-                    <text x="400" y="550" text-anchor="middle" fill="#64748b" font-size="16" font-family="Arial, sans-serif">
-                        Generated Poster - ${new Date().toLocaleDateString()}
+                    <!-- Footer with generated date -->
+                    <rect x="50" y="520" width="700" height="30" fill="rgba(0,0,0,0.1)" rx="15"/>
+                    <text x="400" y="540" text-anchor="middle" fill="${colors.text}" 
+                          font-size="14" font-family="Arial, sans-serif" font-weight="500">
+                        Generated on ${new Date().toLocaleDateString('en-US', { 
+                            year: 'numeric', month: 'long', day: 'numeric' 
+                        })} at ${new Date().toLocaleTimeString('en-US', { 
+                            hour: '2-digit', minute: '2-digit' 
+                        })}
                     </text>
                 </svg>
             `;
